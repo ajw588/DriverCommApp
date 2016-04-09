@@ -1,0 +1,8 @@
+[My Computer]
+My Computer="localhost"
+
+[NI-cRIO9022_v1]
+NI-cRIO9022_v1="192.168.1.50"
+
+[NI-cRIO9024-v2]
+NI-cRIO9024-v2="192.168.2.51"

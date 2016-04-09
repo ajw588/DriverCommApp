@@ -1,0 +1,249 @@
+001:00:System ReStart, Acknowledge to Continue.
+010:01:E-Stop Signal-1 Health Status Down
+011:01:E-Stop Signal-2 Health Status Down
+012:01:E-Stop Both Signals Faulty
+013:01:E-Stop Inputs Discrepancy
+014:01:E-Stop Activated
+030:00:Local Logs Error
+031:00:Datalogging Error
+032:00:Digital Input Card Module 1 Fault
+033:00:Digital Input Card Module 2 Fault
+034:00:Digital I/O Card Module for Inputs Fault
+035:00:Analog Input Card Module 1 Fault
+036:00:Analog Input Card Module 2 Fault
+037:00:Analog Input Card Module 3 Fault
+038:00:Encoder Card Module 1 Fault
+039:00:Encoder Card Module 2 Fault
+040:00:Digital Output Card Module 1 Fault
+041:00:Digital Output Card Module 2 Fault
+042:00:Digital I/O Card Module for Outputs Fault
+043:00:Analog Outputs Card Module 1 Fault
+044:00:Analog Outputs Card Module 2 Fault
+045:00:Analog Outputs Card Module 3 Fault
+046:00:Spare
+047:00:Spare
+050:02:AHC Allowed Signal-1 Health Status Down
+051:02:AHC Allowed Signal-2 Health Status Down
+052:02:AHC Allowed Both Signals Faulty
+053:02:AHC Allowed Signals Discrepancy
+054:02:AHC Allowed Down while AHC Mode ON
+055:02:CT Allowed Signal-1 Health Status Down
+056:02:CT Allowed Signal-2 Health Status Down
+057:02:CT Allowed Both Signals Faulty
+058:02:CT Allowed Signals Discrepancy
+059:02:CT Allowed Down While CT Mode On
+060:05:Cylinder Forward Alarm Signal-1 Health Status Down
+061:05:Cylinder Forward Alarm Signal-2 Health Status Down
+062:05:Cylinder Forward Alarm Both Signals Faulty
+063:05:Cylinder Forward Alarm Signals Discrepancy
+064:05:Cylinder Forward Warning Signal-1 Health Status Down
+065:05:Cylinder Forward Warning Signal-2 Health Status Down
+066:05:Cylinder Forward Warning Both Signals Faulty
+067:05:Cylinder Forward Warning Signals Discrepancy
+068:05:Cylinder Forward Warning Active
+069:05:Cylinder Forward Alarm Active Without Warning
+070:05:Cylinder Forward Alarm and Warning Active
+071:05:Cylinder Backward Alarm Signal-1 Health Status Down
+072:05:Cylinder Backward Alarm Signal-2 Health Status Down
+073:05:Cylinder Backward Alarm Both Signals Faulty
+074:05:Cylinder Backward Alarm Signals Discrepancy
+075:05:Cylinder Backward Warning Signal-1 Health Status Down
+076:05:Cylinder Backward Warning Signal-2 Health Status Down
+077:05:Cylinder Backward Warning Both Signals Faulty
+078:05:Cylinder Backward Warning Signals Discrepancy
+079:05:Cylinder Backward Warning Active
+080:05:Cylinder Backward Alarm Active Without Warning
+081:05:Cylinder Backward Alarm and Warning Active
+082:07:UPS Low Batt Signal-1 Health Status Down
+083:07:UPS Low Batt Signal-2 Health Status Down
+084:07:UPS Low Batt Both Signals Faulty
+085:07:UPS Low Batt Signals Discrepancy
+086:07:UPS Low Low Batt Signal-1 Health Status Down
+087:07:UPS Low Low Batt Signal-2 Health Status Down
+088:07:UPS Low Low Batt Both Signals Faulty
+089:07:UPS Low Low Batt Signals Discrepancy
+090:07:UPS Ready Signal-1 Health Status Down
+091:07:UPS Ready Signal-2 Health Status Down
+092:07:UPS Ready Both Signals Faulty
+093:07:UPS Ready Signals Discrepancy
+094:07:Main Power OK Signal-1 Health Status Down
+095:07:Main Power OK Signal-2 Health Status Down
+096:07:Main Power OK Both Signals Faulty
+097:07:Main Power OK Signals Discrepancy
+098:07:UPS not Ready
+099:07:UPS Fault (Batt Low=Down and MainPower=OK)
+100:07:UPS Fault (Batt Low Low=Down and MainPower=OK)
+101:07:Main Power Down
+102:07:Main Power Down and UPS Batt Low
+103:07:Main Power Down and UPS Batt Low Low
+104:07:Main Power Down and UPS not Ready
+105:03:AHC Mode On Signal-1 Health Status Down
+106:03:AHC Mode On Signal-2 Health Status Down
+107:03:AHC Mode On Both Signals Faulty
+108:03:AHC Mode On Signals Discrepancy
+109:03:AHC Mode Off Signal Fault
+110:03:AHC Mode Simulate Signal Fault
+111:03:AHC Mode On Activated, and AHC Mode not Allowed by PLC
+112:03:CT Mode On Signal-1 Health Status Down
+113:03:CT Mode On Signal-2 Health Status Down
+114:03:CT Mode On Both Signals Faulty
+115:03:CT Mode On Signals Discrepancy
+116:03:CT Mode Off Signal Fault
+117:03:CT Mode On Activated, and CT mode not Allowed by PLC
+118:03:Reset Alarm Health Status Down
+119:03:Silence Alarm Health Status Down
+120:03:CT Trimming Up Signal Health Status Down
+121:03:CT Trimming Down Signal Health Status Down
+122:03:Test Lamps Signal Health Status Down
+123:03:Extend Compensation Cylinder Health Status Down
+124:03:Retract Compensation Cylinder Health Status Down
+125:03:Reset Startup Signal Health Status Down
+400:08:Heave MRU-1 Signal-1 Health Status Down
+401:08:Heave MRU-1 Signal-2 Health Status Down
+402:08:Heave MRU-1 Signals Fault
+403:08:Heave MRU-1 Discrepancy
+404:08:Heave MRU-1 Low Low
+405:08:Heave MRU-1 Low
+406:08:Heave MRU-1 High
+407:08:Heave MRU-1 High High
+408:08:Pitch MRU-1 Signal-1 Health Status Down
+409:08:Pitch MRU-1 Signal-2 Health Status Down
+410:08:Pitch MRU-1 Both Signals Faulty
+411:08:Pitch MRU-1 Signals Discrepancy
+412:08:Pitch MRU-1 Low Low
+413:08:Pitch MRU-1 Low
+414:08:Pitch MRU-1 High
+415:08:Pitch MRU-1 High High
+416:08:Roll MRU-1 Signal-1 Health Status Down
+417:08:Roll MRU-1 Signal-2 Health Status Down
+418:08:Roll MRU-1 Both Signals Faulty
+419:08:Roll MRU-1 Signals Discrepancy
+420:08:Roll MRU-1 Low Low
+421:08:Roll MRU-1 Low
+422:08:Roll MRU-1 High
+423:08:Roll MRU-1 High High
+448:05:Compensation Cylinder LVDT Signal-1 Health Status Down
+449:05:Compensation Cylinder LVDT Signal-2 Health Status Down
+450:05:Compensation Cylinder LVDT Both Signals Faulty
+451:05:Compensation Cylinder LVDT Signals Discrepancy
+452:05:Compensation Cylinder Position Low Low
+453:05:Compensation Cylinder Position Low
+454:05:Compensation Cylinder Position High
+455:05:Compensation Cylinder Position High High
+456:02:Joystick SetPoint Signal-1 Health Status Down
+457:02:Joystick SetPoint Signal-2 Health Status Down
+458:02:Joystick SetPoint Both Signals Faulty
+459:02:Joystick SetPoint Signals Discrepancy
+460:02:Joystick SetPoint Low Low
+461:02:Joystick SetPoint Low
+462:02:Joystick SetPoint High
+463:02:Joystick SetPoint High High
+464:02:Measured Torque Signal-1 Health Status Down
+465:02:Measured Torque Signal-2 Health Status Down
+466:02:Measured Torque Both Signals Faulty
+467:02:Measured Torque Signals Discrepancy
+468:02:Measured Torque Low Low
+469:02:Measured Torque Low
+470:02:Measured Torque High
+471:02:Measured Torque High High
+472:04:LoadCell-1 Signal-1 Health Status Down
+473:04:LoadCell-1 Signal-2 Health Status Down
+474:04:LoadCell-1 Both Signals Faulty
+475:04:LoadCell-1 Signals Discrepancy
+476:04:LoadCell-1 Low Low
+477:04:LoadCell-1 Low
+478:04:LoadCell-1 High
+479:04:LoadCell-1 High High
+480:04:LoadCell-2 Signal-1 Health Status Down
+481:04:LoadCell-2 Signal-2 Health Status Down
+482:04:LoadCell-2 Both Signals Faulty
+483:04:LoadCell-2 Signals Discrepancy
+484:04:LoadCell-2 Low Low
+485:04:LoadCell-2 Low
+486:04:LoadCell-2 High
+487:04:LoadCell-2 High High
+488:06:Slew Angle Position Signal-1 Health Status Down
+489:06:Slew Angle Position Signal-2 Health Status Down
+490:06:Slew Angle Position Both Signals Faulty
+491:06:Slew Angle Position Signals Discrepancy
+492:06:Slew Angle Position low Low
+493:06:Slew Angle Position Low
+494:06:Slew Angle Position High
+495:06:Slew Angle Position High High
+496:06:Luff Angle Position Signal-1 Health Status Down
+497:06:Luff Angle Position Signal-2 Health Status Down
+498:06:Luff Angle Position Both Signals Faulty
+499:06:Luff Angle Position Signals Discrepancy
+500:06:Luff Angle Position Low Low
+501:06:Luff Angle Position Low
+502:06:Luff Angle Position High
+503:06:Luff Angle Position High High
+504:06:Boom Position Signal-1 Health Status Down
+505:06:Boom Position Signal-2 Health Status Down
+506:06:Boom Position Both Signals Faulty
+507:06:Boom Position Discrepancy
+508:06:Boom Position Low Low
+509:06:Boom Position Low
+510:06:Boom Position High
+511:06:Boom Position High High
+512:06:Knuckle Angle Position Signal-1 Health Status Down
+513:06:Knuckle Angle Position Signal-2 Health Status Down
+514:06:Knuckle Angle Position Both Signals Faulty
+515:06:Knuckle Angle Position Signals Discrepancy
+516:06:Knuckle Angle Position Low Low
+517:06:Knuckle Angle Position Low
+518:06:Knuckle Angle Position High
+519:06:Knuckle Angle Position High High
+520:02:Max Torque Available Signal-1 Health Status Down
+521:02:Max Torque Available Signal-2 Health Status Down
+522:02:Max Torque Available Both Signals Faulty
+523:02:Max Torque Available Signals Discrepancy
+524:02:Max Torque Available Low Low
+525:02:Max Torque Available Low
+526:02:Max Torque Available High
+527:02:Max Torque Available High High
+528:08:MRU-1 Ready Signal Health Status Down
+529:08:MRU-1 Became not Operative
+530:04:Drum Layer Health Status Down
+531:04:Drum Wire Health Status Down
+532:04:Drum Wrap Health Status Down
+600:02:AHC Output Out-1 Health Status Down
+601:02:AHC Output Out-2 Health Status Down
+602:02:AHC Output Both Signals Faulty
+603:02:Torque Output Out-1 Health Status Down
+604:02:Torque Output Out-2 Health Status Down
+605:02:Torque Output Both Signals Faulty
+700:04:Drum Incremental Encoder Fault
+701:04:Drum Absolute Encoder Fault
+702:04:Slew Encoder Fault
+703:04:Luff Encoder Fault
+704:04:Boom Encoder Fault
+705:04:Knucle Encoder Fault
+706:04:Cylinder Compensator Linear Encoder Fault
+750:02:Ethernet Link Fault
+751:02:Ethernet Link Fault -Critical AHC-
+752:02:Ethernet Link Fault -Critical CT-
+753:08:Serial Bus MRU-1 Fault
+754:08:Serial Bus MRU-2 Fault
+755:08:Serial Bus MRU-1 Fault -Critical AHC-
+756:08:Serial Bus MRU-2 Fault -Critical AHC-
+800:09:Hook Motion High High Position Error
+801:09:Hook Motion High Position Error
+802:03:Joystick Command High Level While AHC
+803:03:Joystick Command High High Level While AHC
+804:04:Warning Hook Reaching Sheave
+805:04:Alarm Hook Reaching Sheave
+806:04:Warning Not enough wire left in Drum
+807:04:Alarm Not enough wire left in Drum
+808:05:AHC not Allowed by PLC
+809:05:Cylinder Compensator needs to be in middle position to allow AHC
+810:05:AHC On and Off signals active at the same time
+811:05:AHC On and Simulate signals active at the same time
+812:05:High Sea Prediction Error
+813:05:Drum Absolut Encoder not Calibrated
+900:09:Low Torque Capacity Left
+901:09:Low Low Torque Capacity Left
+902:09:CT High Following Error
+903:09:CT High High Following Error
+904:09:CT not allowed by PLC
+905:09:CT On and Off signals active at the same time
