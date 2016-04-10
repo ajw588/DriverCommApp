@@ -169,16 +169,20 @@
     <Compile Include="Config\ConfMain.cs" />
     <Compile Include="Config\DBConfig.cs" />
     <Compile Include="Config\DriverConfig.cs" />
+    <Compile Include="Database\DB_Functions.cs" />
     <Compile Include="Database\DB_Main.cs" />
     <Compile Include="Database\DB_MySQL.cs" />
+    <Compile Include="DriverComm\DriverFunctions.cs" />
     <Compile Include="DriverComm\DriverGeneric.cs" />
     <Compile Include="DriverComm\DriverS7.cs" />
     <Compile Include="DriverComm\DriverXWave.cs" />
     <Compile Include="DriverComm\DriverModbusTCP.cs" />
     <Compile Include="DriverComm\snap7.net.cs" />
     <Compile Include="Historics\HistoricsMain.cs" />
+    <Compile Include="Historics\Hist_Functions.cs" />
     <Compile Include="Historics\Hist_MySQL.cs" />
-    <Compile Include="MainCycle.cs" />
+    <Compile Include="MainObjects\MainCycle.cs" />
+    <Compile Include="MainObjects\MainFunctions.cs" />
     <Compile Include="MainScreen.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -187,6 +191,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="MainObjects\StatReport.cs" />
     <EmbeddedResource Include="MainScreen.resx">
       <DependentUpon>MainScreen.cs</DependentUpon>
     </EmbeddedResource>

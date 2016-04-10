@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.ComponentModel;
 using DriverCommApp.Conf;
-using DriverCommApp.DBMain;
 using System.Collections.Concurrent;
 
 namespace DriverCommApp.Historics
@@ -60,14 +60,23 @@ namespace DriverCommApp.Historics
         }
 
         /// <summary>
-        /// Drivers Complete Configuration.</summary>
+        /// Drivers Complete Configuration.
+        /// </summary>
         List<DrvHConf> DriversHistConf;
 
-        ConcurrentQueue<CommDriver.DriverGeneric.DataExt []>[] FIFO_Hist;
+        ///<summary>
+        /// Queue for Data to Write to the Historics Database
+        ///</summary>
+        ConcurrentQueue<CommDriver.DriverGeneric.DataExt[]>[] FIFO_Hist;
 
+        ///<summary>
+        /// BackgroundWorker for Historics Queue Processing
+        ///</summary>
+        internal BackgroundWorker Worker;
 
         /// <summary>
-        /// Struct for multithread database write.</summary>
+        /// Struct for multithread database write.
+        /// </summary>
         public struct DBWriteStruct
         {
             public CommDriver.DriverGeneric.DataExt[] DataWrite;
@@ -108,6 +117,11 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// MySQL Database Backup.</summary>
         Hist_MySQL BackupMySQL;
+
+        /// <summary>
+        /// Workers Running Flag.
+        /// </summary>
+        public bool WorkersRuning;
 
         /// <summary>
         /// Flag for initialization.</summary>
@@ -203,35 +217,57 @@ namespace DriverCommApp.Historics
 
             numDrivers = DriversHistConf.Count;
 
-            if (HistConf.MasterServer.Enable && (numDrivers > 0))
+            if (numDrivers > 0)
             {
-                //A queue for each driver.
-                FIFO_Hist = new ConcurrentQueue<CommDriver.DriverGeneric.DataExt[]>[numDrivers];
-
-                //Build the Driver and Initialize for MySQL
-                if (HistConf.MasterServer.Type == DBConfig.DBServerType.MySQL)
+                if (HistConf.MasterServer.Enable)
                 {
-                    MasterMySQL = new Hist_MySQL(HistConf.MasterServer);
-                    MasterMySQL.Initialize(InitialSet, DriversHistConf);
+                    //A queue for each driver.
+                    FIFO_Hist = new ConcurrentQueue<CommDriver.DriverGeneric.DataExt[]>[numDrivers];
 
-                    if (MasterMySQL.isInitialized) { isInitialized = true; retVal = 1; }
-                    else { isInitialized = false; retVal = -1; }
+                    //Build the Driver and Initialize for MySQL
+                    if (HistConf.MasterServer.Type == DBConfig.DBServerType.MySQL)
+                    {
+                        MasterMySQL = new Hist_MySQL(HistConf.MasterServer);
+                        MasterMySQL.Initialize(InitialSet, DriversHistConf);
 
-                } //END IF MySQL Initialization.
-            } //Master Server Initialization.
+                        if (MasterMySQL.isInitialized) { isInitialized = true; retVal = 1; }
+                        else { isInitialized = false; retVal = -1; }
 
-            if (HistConf.BackupServer.Enable)
-            {
-                //Build the Driver and Initialize for MySQL
-                if (HistConf.BackupServer.Type == DBConfig.DBServerType.MySQL)
+                    } //END IF MySQL Initialization.
+                } //Master Server Initialization.
+
+                if (HistConf.BackupServer.Enable)
                 {
-                    BackupMySQL = new Hist_MySQL(HistConf.BackupServer);
-                    BackupMySQL.Initialize(InitialSet, DriversHistConf);
+                    //Build the Driver and Initialize for MySQL
+                    if (HistConf.BackupServer.Type == DBConfig.DBServerType.MySQL)
+                    {
+                        BackupMySQL = new Hist_MySQL(HistConf.BackupServer);
+                        BackupMySQL.Initialize(InitialSet, DriversHistConf);
 
-                    if (BackupMySQL.isInitialized) { isInitialized = true; retVal = 2; }
-                    else { isInitialized = false; retVal = -2; }
-                } //END IF MySQL Initialization.
-            } //Backup Server Initialization.
+                        if (BackupMySQL.isInitialized) { isInitialized = true; retVal = 2; }
+                        else { isInitialized = false; retVal = -2; }
+                    } //END IF MySQL Initialization.
+                } //Backup Server Initialization.
+
+                //Initialize the Worker
+                if ((HistConf.MasterServer.Enable) || (HistConf.BackupServer.Enable))
+                {
+                    //Create the Background workers.
+                    Worker = new BackgroundWorker();
+
+                    //Attach the functions
+                    Worker.DoWork += new DoWorkEventHandler(Worker_DoWork);
+                    Worker.RunWorkerCompleted +=
+                        new RunWorkerCompletedEventHandler(Worker_RunWorkerCompleted);
+                    Worker.ProgressChanged +=
+                        new ProgressChangedEventHandler(Worker_ProgressChanged);
+
+                    //Properties
+                    Worker.WorkerReportsProgress = true;
+                    Worker.WorkerSupportsCancellation = true;
+                }
+
+            }
 
             return retVal;
         } //END Function Initialize
@@ -241,7 +277,7 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int StartWork()
         {
-
+            Worker.RunWorkerAsync();
         }
 
         /// <summary>
@@ -259,6 +295,140 @@ namespace DriverCommApp.Historics
         {
 
         }
+
+        /// <summary>
+        /// This event handler is where the actual,
+        /// potentially time-consuming work is done.
+        /// Database Read -> Drivers Read and Write -> Database Write.
+        /// </summary>
+        private void Worker_DoWork(object sender,
+            DoWorkEventArgs e)
+        {
+            int i, msLeft;
+            DateTime initialTime, finalTime;
+            long msCycle;
+            WorkerProgress ToReport;
+
+            //Get the Driver for this worker.
+            DriverGeneric thisDriver = (DriverGeneric)e.Argument;
+
+            // Get the BackgroundWorker that raised this event.
+            BackgroundWorker worker = sender as BackgroundWorker;
+
+            //Name the Worker
+            if (Thread.CurrentThread.Name == null)
+                Thread.CurrentThread.Name = "CycleDriver" + thisDriver.thisDriverConf.ID.ToString("00");
+
+            //Initialize variables
+            ToReport = new WorkerProgress();
+            msCycle = 0; i = 0;
+
+            while (!e.Cancel)
+            {
+                //Get time
+                initialTime = DateTime.Now;
+
+                if (i > 99) { i = 0; } else { i++; }
+                if (worker.CancellationPending)
+                {
+                    e.Cancel = true;
+                }
+                else
+                {
+
+
+                    //Do Operations.
+
+                    if (!DoCycle(thisDriver, out ToReport.DVstat, out ToReport.DBstat))
+                    {
+                        //Fatal Error, Cancel the Worker
+                        e.Cancel = true;
+                    }
+
+                    //Sleep for the rest of the time cicle.
+                    finalTime = DateTime.Now;
+                    msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
+                    ToReport.LoopTime = msCycle;
+                    ToReport.DriverID = thisDriver.thisDriverConf.ID;
+
+                    if (msCycle < thisDriver.thisDriverConf.CycleTime)
+                    {
+                        msLeft = (int)(thisDriver.thisDriverConf.CycleTime - msCycle);
+                        Thread.Sleep(msLeft);
+                        ToReport.StatMsg = "";
+                    }
+                    else
+                    {
+                        //Cicle is taking too much time!!!
+                        //Only report if its 15% higger than limit.
+                        if (msCycle > (thisDriver.thisDriverConf.CycleTime * 1.15))
+                            ToReport.StatMsg = "Main Cycle taking too long, " + msCycle.ToString() +
+                                " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms";
+                    }
+
+                    worker.ReportProgress(i, ToReport);
+
+                }
+            } //While not Cancelation
+
+        }//END Function DoWork
+
+        /// <summary>
+        /// This event handler deals with finalizing the
+        /// background operation. </summary>
+        private void Worker_RunWorkerCompleted(
+            object sender, RunWorkerCompletedEventArgs e)
+        {
+            // First, handle the case where an exception was thrown.
+            if (e.Error != null)
+            {
+
+            }
+            else if (e.Cancelled)
+            {
+                // Next, handle the case where the user canceled 
+                // the operation.
+                // Note that due to a race condition in 
+                // the DoWork event handler, the Cancelled
+                // flag may not have been set, even though
+                // CancelAsync was called.
+
+            }
+            else
+            {
+                // Finally, handle the case where the operation 
+                // succeeded.
+            }
+
+            //Driver Worker Finished and removed from counter.
+            NumDvRun--;
+        }
+
+        ///<summary>
+        /// This event handles the Worker updates.
+        /// </summary>
+        private void Worker_ProgressChanged(object sender,
+            ProgressChangedEventArgs e)
+        {
+            WorkerProgress StatReport;
+
+            //Get the report data
+            StatReport = (WorkerProgress)e.UserState;
+
+            if (StatReport.DVstat.StatInt != StatT.Undefined)
+                StatDVMain.NewStat(StatReport.DVstat.StatInt, StatReport.DVstat.StatMSG);
+
+            if (StatReport.DBstat.StatInt != StatT.Undefined)
+                StatDBMain.NewStat(StatReport.DBstat.StatInt, StatReport.DBstat.StatMSG);
+
+            if (StatReport.StatMsg.Length > 3)
+                StatDBMain.NewStat(StatT.Good, StatReport.DriverID, StatReport.StatMsg);
+
+            //Report the TimeLoop
+            if (StatReport.DriverID < StatDVMain.ID_Time.Length)
+                StatDVMain.ID_Time[StatReport.DriverID] = StatReport.LoopTime;
+        }
+
 
         /// <summary>
         /// Write to database.
@@ -290,7 +460,7 @@ namespace DriverCommApp.Historics
                 WriteBackup();
 
                 if (BackupWStat.StatAllOK)
-                    { retVal = 0; GeneralStat.StatAllOK = true; }
+                { retVal = 0; GeneralStat.StatAllOK = true; }
                 else
                 { GeneralStat.statusMSG = "BackupHist: " + BackupWStat.statusMSG; }
             }
@@ -312,14 +482,16 @@ namespace DriverCommApp.Historics
                 BackupServer.Join();
 
                 //Only one ok return 1
-                if ( (MasterWStat.StatAllOK) || (BackupWStat.StatAllOK) ) retVal = 1;
+                if ((MasterWStat.StatAllOK) || (BackupWStat.StatAllOK)) retVal = 1;
 
                 //All ok return 0
                 if ((MasterWStat.StatAllOK) && (BackupWStat.StatAllOK))
-                    { retVal = 0; GeneralStat.StatAllOK = true; }
+                { retVal = 0; GeneralStat.StatAllOK = true; }
                 else
-                { GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG + 
-                        Environment.NewLine + "BackupHist: " + BackupWStat.statusMSG; }
+                {
+                    GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG +
+                          Environment.NewLine + "BackupHist: " + BackupWStat.statusMSG;
+                }
             }
 
             return retVal;
@@ -354,7 +526,6 @@ namespace DriverCommApp.Historics
             }
         } // END WriteBackup Function
 
-
         /// <summary>
         /// Clean database.
         /// </summary>
@@ -369,7 +540,7 @@ namespace DriverCommApp.Historics
                 retVal = MasterMySQL.CleanHist();
                 MasterWStat.statusMSG = MasterMySQL.status;
 
-                if (retVal<0)
+                if (retVal < 0)
                 { GeneralStat.StatAllOK = true; }
                 else
                 { GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG; }
@@ -381,7 +552,7 @@ namespace DriverCommApp.Historics
                 BackupWStat.statusMSG = BackupMySQL.status;
 
                 if (retVal < 0)
-                {  GeneralStat.StatAllOK = true; }
+                { GeneralStat.StatAllOK = true; }
                 else
                 { GeneralStat.statusMSG = "BackupHist: " + BackupWStat.statusMSG; }
             }
@@ -389,7 +560,7 @@ namespace DriverCommApp.Historics
             {
                 //Clear the old registers.
                 retVal = MasterMySQL.CleanHist();
-                if (retVal<0) { MasterWStat.StatAllOK = true; }
+                if (retVal < 0) { MasterWStat.StatAllOK = true; }
                 else { MasterWStat.StatAllOK = false; MasterWStat.statusMSG = MasterMySQL.status; }
 
                 retVal = BackupMySQL.CleanHist();

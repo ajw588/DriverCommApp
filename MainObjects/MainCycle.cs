@@ -67,11 +67,13 @@ namespace DriverCommApp
                 if (MSGStat.Length > 3)
                     if (StatMSG.Length > 3)
                     { StatMSG = StatMSG + Environment.NewLine + time + MSGStat; }
-                    else { StatMSG = time+MSGStat; }
+                    else
+                    { StatMSG = time+MSGStat; }
 
                 if (StatInt == StatT.Good)
                 { isOK = true; }
-                else { isOK = false; }
+                else
+                { isOK = false; }
             }
 
             //Method to Update the Status, Including and ID
@@ -161,7 +163,6 @@ namespace DriverCommApp
         /// </summary>
         object LockDBRead = new object();
         object LockDBWrite = new object();
-        object LockHistorics = new object();
 
         /// <summary>
         /// Main Cycle constructor.
@@ -722,77 +723,6 @@ namespace DriverCommApp
             if (StatReport.DriverID<StatDVMain.ID_Time.Length)
                 StatDVMain.ID_Time[StatReport.DriverID] = StatReport.LoopTime;
         }
-
-
-        ///<summary>
-        ///############################## Deprecated #################################
-        ///############## Do not use, use the worker aproach instead #################
-        ///######################## 22/03/2016 Jose Morales ##########################
-        /// Do the ciclic work
-        /// Database Read -> Drivers Read and Write -> Database Write.
-        /// </summary>
-        public int Deprecated_DoSomeWork(int DriverID)
-        {
-            
-            int retVal = 0;
-            string StatusMSG;
-            /*
-            //Parallel Block objects
-            object LockDBRead = new object();
-            object LockDBWrite = new object();
-            object LockHistorics = new object();
-            object LockDVStat = new object();
-
-            //Reinitialize MSG for Status
-            StatDV.ResetStat(); StatDB.ResetStat();
-
-            if (isInitialized)
-            {
-
-
-                Parallel.ForEach(theDriver, new ParallelOptions { MaxDegreeOfParallelism = 2 }, thisDriver =>
-                {
-                    //Loop parallel duplicated variables
-                    int cRecon = 0, valRet = 0;
-                    ulong StatVar = 0;
-                    string DBmsg = "";
-
-                    if (Thread.CurrentThread.Name == null)
-                        Thread.CurrentThread.Name = "CicleDriver" + thisDriver.thisDriverConf.ID.ToString("00");
-
-
-                }); // Parallel FOR
-
-            }
-            else
-            {
-
-            }
-
-            if ((StatDV.StatInt == StatT.Bad) || (StatDV.StatInt == StatT.Bad))
-            {
-                retVal = -10;
-            }
-            else if ((StatDV.StatInt == StatT.Warning) || (StatDV.StatInt == StatT.Warning))
-            {
-                retVal = -1;
-            }
-
-            StatusMSG = "";
-            if (StatDV.StatInt == StatT.Undefined)
-            {
-                StatDV.NewStat(StatT.Good, StatusMSG);
-            }
-
-            if (StatDB.StatInt == StatT.Undefined)
-            {
-                StatDB.NewStat(StatT.Good, StatusMSG);
-            }
-            */
-                        return retVal;
-
-        } //END Function DoSomeWork
-
 
         ///<summary>
         /// --Destructor--
