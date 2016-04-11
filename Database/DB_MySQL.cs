@@ -2,18 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DriverCommApp.Conf;
 using MySql;
 using MySql.Data.MySqlClient;
 
+//This APP Namespace
+using static DriverCommApp.Database.DB_Functions;
+using DriverCommApp.Conf;
 
-namespace DriverCommApp.DBMain
+namespace DriverCommApp.Database.DBMySQL
 {
     class DB_MySQL : IDisposable
     {
         /// <summary>
         /// Database Server Configuration.</summary>
-        DB_Main.ServerConf DBConfig;
+        ServerConf DBConfig;
 
         /// <summary>
         /// Database MySQL Connection Object.</summary>
@@ -30,7 +32,7 @@ namespace DriverCommApp.DBMain
         /// <summary>
         /// Class Constructor.
         /// <param name="Server">Server configuration struct.</param> </summary>
-        public DB_MySQL(DB_Main.ServerConf Server)
+        public DB_MySQL(ServerConf Server)
         {
             DBConfig = Server;
             isInitialized = false;
@@ -40,7 +42,7 @@ namespace DriverCommApp.DBMain
         /// Initialize the Object.
         /// <param name="DriversConf">Driver Configuration and DataAreas (Needed for initial set).</param> 
         /// <param name="InitialSet">Initial set flag (will erase actual tables).</param> </summary>
-        public void Initialize(List<DB_Main.DrvConf> DriversConf, bool InitialSet)
+        public void Initialize(List<DrvConf> DriversConf, bool InitialSet)
         {
             string myConnectionString;
             int retVal = 0;
@@ -68,13 +70,13 @@ namespace DriverCommApp.DBMain
         /// <summary>
         /// Initialize the Database.
         /// <param name="DriversConf">Driver Configuration and DataAreas (Needed for initial set).</param> </summary>
-        private int InitDB(List<DB_Main.DrvConf> DriversConf)
+        private int InitDB(List<DrvConf> DriversConf)
         {
             int j, k;
             string TBname, STRcmd, valStr, idNameSTR;
 
             //Create tables (one for each driver)
-            foreach (DB_Main.DrvConf aDriverConfig in DriversConf)
+            foreach (DrvConf aDriverConfig in DriversConf)
             {
                 TBname = "Drv" + aDriverConfig.DriverConf.ID.ToString("00");
                 STRcmd = "DROP TABLES IF EXISTS " + TBname +";";
@@ -232,9 +234,8 @@ namespace DriverCommApp.DBMain
 
         /// <summary>
         /// Read data from the database. 
-        /// <param name="DataExt">Array Struct reference to store the data readed from the DB.</param>
-        /// <param name="NumDA">Number of Data Areas to be Read.</param></summary>
-        public bool Read(ref CommDriver.DriverGeneric.DataExt[] DataExt, int NumDA)
+        /// <param name="Data">Struct ref to object to save data.</param>
+        public bool Read(ref DBStructData Data)
         {
             int i, j;
             string STRcmd, TBname, ValSTR;
@@ -244,13 +245,13 @@ namespace DriverCommApp.DBMain
             //open connection
             if (this.Connect() == true)
             {
-                for (i = 0; i < NumDA; i++)
+                for (i = 0; i < Data.numDA; i++)
                 {
-                    if (((DataExt.Length > i) && (DataExt[i].AreaConf.Enable)) && (DataExt[i].AreaConf.Write))
+                    if (((Data.DataDV.Length > i) && (Data.DataDV[i].AreaConf.Enable)) && (Data.DataDV[i].AreaConf.Write))
                     {
-                        TBname = "Drv" + DataExt[i].AreaConf.ID_Driver.ToString("00");
+                        TBname = "Drv" + Data.DataDV[i].AreaConf.ID_Driver.ToString("00");
                         ValSTR = "";
-                        switch (DataExt[i].AreaConf.dataType)
+                        switch (Data.DataDV[i].AreaConf.dataType)
                         {
                             case DriverConfig.DatType.Bool:
                                 ValSTR = ", dBool";
@@ -277,7 +278,7 @@ namespace DriverCommApp.DBMain
                         }
                         //SQL Command String
                         STRcmd = "SELECT idDA, idValNum" + ValSTR + " FROM " + TBname + " WHERE idDA=" +
-                            DataExt[i].AreaConf.ID.ToString("00") + " ORDER BY idValNum;";
+                            Data.DataDV[i].AreaConf.ID.ToString("00") + " ORDER BY idValNum;";
 
                         //Create Command
                         cmd = new MySqlCommand(STRcmd, conn);
@@ -288,37 +289,37 @@ namespace DriverCommApp.DBMain
                         while (dataReader.Read())
                         {
                             j = int.Parse(dataReader["idValNum"] + "");
-                            if ((int.Parse(dataReader["idDA"] + "") == DataExt[i].AreaConf.ID) &&
-                                (DataExt[i].AreaConf.Amount > j) && (j >= 0))
-                                switch (DataExt[i].AreaConf.dataType)
+                            if ((int.Parse(dataReader["idDA"] + "") == Data.DataDV[i].AreaConf.ID) &&
+                                (Data.DataDV[i].AreaConf.Amount > j) && (j >= 0))
+                                switch (Data.DataDV[i].AreaConf.dataType)
                                 {
                                     case DriverConfig.DatType.Bool:
-                                        if (DataExt[i].Data.dBoolean.Length > j)
-                                            DataExt[i].Data.dBoolean[j] = bool.Parse(dataReader["dBool"] + "");
+                                        if (Data.DataDV[i].Data.dBoolean.Length > j)
+                                            Data.DataDV[i].Data.dBoolean[j] = bool.Parse(dataReader["dBool"] + "");
                                         break;
                                     case DriverConfig.DatType.Byte:
-                                        if (DataExt[i].Data.dByte.Length > j)
-                                            DataExt[i].Data.dByte[j] = byte.Parse(dataReader["dByte"] + "");
+                                        if (Data.DataDV[i].Data.dByte.Length > j)
+                                            Data.DataDV[i].Data.dByte[j] = byte.Parse(dataReader["dByte"] + "");
                                         break;
                                     case DriverConfig.DatType.Word:
-                                        if (DataExt[i].Data.dWord.Length > j)
-                                            DataExt[i].Data.dWord[j] = ushort.Parse(dataReader["dWord"] + "");
+                                        if (Data.DataDV[i].Data.dWord.Length > j)
+                                            Data.DataDV[i].Data.dWord[j] = ushort.Parse(dataReader["dWord"] + "");
                                         break;
                                     case DriverConfig.DatType.DWord:
-                                        if (DataExt[i].Data.dWord.Length > j)
-                                            DataExt[i].Data.dWord[j] = ushort.Parse(dataReader["dDWord"] + "");
+                                        if (Data.DataDV[i].Data.dWord.Length > j)
+                                            Data.DataDV[i].Data.dWord[j] = ushort.Parse(dataReader["dDWord"] + "");
                                         break;
                                     case DriverConfig.DatType.sDWord:
-                                        if (DataExt[i].Data.dDWord.Length > j)
-                                            DataExt[i].Data.dDWord[j] = uint.Parse(dataReader["dsWord"] + "");
+                                        if (Data.DataDV[i].Data.dDWord.Length > j)
+                                            Data.DataDV[i].Data.dDWord[j] = uint.Parse(dataReader["dsWord"] + "");
                                         break;
                                     case DriverConfig.DatType.Real:
-                                        if (DataExt[i].Data.dsDWord.Length > j)
-                                            DataExt[i].Data.dsDWord[j] = int.Parse(dataReader["dReal"] + "");
+                                        if (Data.DataDV[i].Data.dsDWord.Length > j)
+                                            Data.DataDV[i].Data.dsDWord[j] = int.Parse(dataReader["dReal"] + "");
                                         break;
                                     case DriverConfig.DatType.String:
-                                        if (DataExt[i].Data.dString.Length > j)
-                                            DataExt[i].Data.dString[j] = dataReader["dString"] + "";
+                                        if (Data.DataDV[i].Data.dString.Length > j)
+                                            Data.DataDV[i].Data.dString[j] = dataReader["dString"] + "";
                                         break;
                                 }
 
@@ -346,33 +347,32 @@ namespace DriverCommApp.DBMain
 
         /// <summary>
         /// Write data to the database. 
-        /// <param name="DataExt">Array Struct with the data to be written in the DB.</param>
-        /// <param name="NumDA">Number of Data Areas to be Written.</param></summary>
-        public bool Write(CommDriver.DriverGeneric.DataExt[] DataExt, int NumDA)
+        /// <param name="Data">Struct with the data to be written in the DB.</param>
+        public bool Write(DBStructData Data)
         {
             int i, j, k, initialLenght;
             string STRcmd, TBname, idNameSTR, caseSTR, whereSTR, timeSTR;
-
-            string[] STRcmdM = new string[NumDA]; //Var for multiple writes
+            DateTime DateObj;
+            string[] STRcmdM = new string[Data.numDA]; //Var for multiple writes
             k = 0;
-            for (i = 0; i < NumDA; i++)
+            for (i = 0; i < Data.numDA; i++)
             {
-                TBname = "Drv" + DataExt[i].AreaConf.ID_Driver.ToString("00");
+                TBname = "Drv" + Data.DataDV[i].AreaConf.ID_Driver.ToString("00");
 
                 //Initialize the descriptions only once.
-                if ( (!DataExt[i].FirstInit) && (DataExt[i].VarNames != null) )
+                if ( (!Data.DataDV[i].FirstInit) && (Data.DataDV[i].VarNames != null) )
                 {
                     caseSTR = ""; whereSTR = " WHERE IdName IN ( ";
                     initialLenght = whereSTR.Length + 1;
                     STRcmd = "UPDATE " + TBname + " SET Description = CASE IdName ";
 
-                    for (j = 0; j < DataExt[i].AreaConf.Amount; j++)
+                    for (j = 0; j < Data.DataDV[i].AreaConf.Amount; j++)
                     {
-                        if (DataExt[i].VarNames[j] != null)
+                        if (Data.DataDV[i].VarNames[j] != null)
                         {
-                            idNameSTR = DataExt[i].AreaConf.ID_Driver.ToString("00") +
-                               DataExt[i].AreaConf.ID.ToString("00") + j.ToString("0000");
-                            caseSTR = caseSTR + " WHEN " + idNameSTR + " THEN " + "'" + DataExt[i].VarNames[j] + "' ";
+                            idNameSTR = Data.DataDV[i].AreaConf.ID_Driver.ToString("00") +
+                               Data.DataDV[i].AreaConf.ID.ToString("00") + j.ToString("0000");
+                            caseSTR = caseSTR + " WHEN " + idNameSTR + " THEN " + "'" + Data.DataDV[i].VarNames[j] + "' ";
 
                             if (whereSTR.Length < initialLenght)
                             {
@@ -393,16 +393,16 @@ namespace DriverCommApp.DBMain
                         if (!SQLcmdSingle(STRcmd)) return false;
                     }
 
-                    DataExt[i].FirstInit = true; //Reset the flag
+                    Data.DataDV[i].FirstInit = true; //Reset the flag
                 } //END If FirstWrite
 
                 // Write the data readed from the devices.
-                if (((DataExt.Length > i) && (DataExt[i].AreaConf.Enable)) && (!DataExt[i].AreaConf.Write))
+                if (((Data.DataDV.Length > i) && (Data.DataDV[i].AreaConf.Enable)) && (!Data.DataDV[i].AreaConf.Write))
                 {
                     caseSTR = ""; whereSTR = " WHERE IdName IN (";
                     STRcmdM[i] = "UPDATE " + TBname + " SET ";
 
-                    switch (DataExt[i].AreaConf.dataType)
+                    switch (Data.DataDV[i].AreaConf.dataType)
                     {
                         case DriverConfig.DatType.Bool:
                             STRcmdM[i] = STRcmdM[i] + "dBool = CASE IdName ";
@@ -430,10 +430,10 @@ namespace DriverCommApp.DBMain
                             break;
                     }
 
-                    for (j = 0; j < DataExt[i].AreaConf.Amount; j++)
+                    for (j = 0; j < Data.DataDV[i].AreaConf.Amount; j++)
                     {
-                        idNameSTR = DataExt[i].AreaConf.ID_Driver.ToString("00") +
-                               DataExt[i].AreaConf.ID.ToString("00") + j.ToString("0000");
+                        idNameSTR = Data.DataDV[i].AreaConf.ID_Driver.ToString("00") +
+                               Data.DataDV[i].AreaConf.ID.ToString("00") + j.ToString("0000");
 
                         if (j == 0)
                         {
@@ -446,30 +446,30 @@ namespace DriverCommApp.DBMain
 
                         caseSTR = caseSTR + " WHEN " + idNameSTR + " THEN ";
 
-                        switch (DataExt[i].AreaConf.dataType)
+                        switch (Data.DataDV[i].AreaConf.dataType)
                         {
                             case DriverConfig.DatType.Bool:
-                                caseSTR = caseSTR + "'" + DataExt[i].Data.dBoolean[j].ToString() + "'";
+                                caseSTR = caseSTR + "'" + Data.DataDV[i].Data.dBoolean[j].ToString() + "'";
                                 break;
                             case DriverConfig.DatType.Byte:
-                                caseSTR = caseSTR + DataExt[i].Data.dByte[j].ToString();
+                                caseSTR = caseSTR + Data.DataDV[i].Data.dByte[j].ToString();
                                 break;
                             case DriverConfig.DatType.Word:
-                                caseSTR = caseSTR + DataExt[i].Data.dWord[j].ToString();
+                                caseSTR = caseSTR + Data.DataDV[i].Data.dWord[j].ToString();
                                 break;
                             case DriverConfig.DatType.DWord:
-                                caseSTR = caseSTR + DataExt[i].Data.dDWord[j].ToString();
+                                caseSTR = caseSTR + Data.DataDV[i].Data.dDWord[j].ToString();
                                 break;
                             case DriverConfig.DatType.sDWord:
-                                caseSTR = caseSTR + DataExt[i].Data.dsDWord[j].ToString();
+                                caseSTR = caseSTR + Data.DataDV[i].Data.dsDWord[j].ToString();
                                 break;
                             case DriverConfig.DatType.Real:
-                                if ( (float.IsNaN(DataExt[i].Data.dReal[j])) || (float.IsInfinity(DataExt[i].Data.dReal[j])) )
-                                    DataExt[i].Data.dReal[j] = 0;
-                                caseSTR = caseSTR + DataExt[i].Data.dReal[j].ToString();
+                                if ( (float.IsNaN(Data.DataDV[i].Data.dReal[j])) || (float.IsInfinity(Data.DataDV[i].Data.dReal[j])) )
+                                    Data.DataDV[i].Data.dReal[j] = 0;
+                                caseSTR = caseSTR + Data.DataDV[i].Data.dReal[j].ToString();
                                 break;
                             case DriverConfig.DatType.String:
-                                caseSTR = caseSTR + "'" + DataExt[i].Data.dString[j] + "'";
+                                caseSTR = caseSTR + "'" + Data.DataDV[i].Data.dString[j] + "'";
                                 break;
                             default:
                                 return false;
@@ -486,16 +486,14 @@ namespace DriverCommApp.DBMain
                         WHERE id IN (1, 2, 3)*/
 
                     }
+                    DateObj = new DateTime(Data.DataDV[i].NowTimeTicks, DateTimeKind.Utc);
 
-                    
-                        timeSTR = DataExt[i].TimeStamp.Year.ToString("0000") + "-" +
-                        DataExt[i].TimeStamp.Month.ToString("00") + "-" +
-                        DataExt[i].TimeStamp.Day.ToString("00") + " " +
-                        DataExt[i].TimeStamp.Hour.ToString("00") + ":" +
-                        DataExt[i].TimeStamp.Minute.ToString("00") + ":" +
-                        DataExt[i].TimeStamp.Second.ToString("00");
-
-
+                    timeSTR = DateObj.Year.ToString("0000") + "-" +
+                        DateObj.Month.ToString("00") + "-" +
+                        DateObj.Day.ToString("00") + " " +
+                        DateObj.Hour.ToString("00") + ":" +
+                        DateObj.Minute.ToString("00") + ":" +
+                        DateObj.Second.ToString("00");
 
                     STRcmdM[i] = STRcmdM[i] + caseSTR + " END, TimeUpd='" + timeSTR + "'" + whereSTR + ");";
                     k++; //index counting the good Data-Areas
@@ -504,7 +502,7 @@ namespace DriverCommApp.DBMain
 
             }// For cicle thru Data Areas
              //Send the query
-            if (k > 0) { if (!SQLcmdMult(STRcmdM,NumDA)) return false; }
+            if (k > 0) { if (!SQLcmdMult(STRcmdM,Data.numDA)) return false; }
             return true;
         } //END Write function
 

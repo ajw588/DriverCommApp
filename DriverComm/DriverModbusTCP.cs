@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DriverCommApp.Conf;
 using EasyModbus;
 
-namespace DriverCommApp.CommDriver
+//This APP Namespace
+using DriverCommApp.Conf;
+using static DriverCommApp.DriverComm.DriverFunctions;
+
+namespace DriverCommApp.DriverComm.ModbusTCP
 {
 
     class DriverModbusTCP
@@ -28,11 +31,11 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Master Driver Conf.</summary>
-        DriverGeneric.CConf MasterDriverConf;
+        CConf MasterDriverConf;
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        DriverGeneric.AreaData[] MasterDataAreaConf;
+        AreaData[] MasterDataAreaConf;
 
         /// <summary>
         /// Flag for Driver Initialization.</summary>
@@ -52,7 +55,7 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Class contructor.</summary>
-        public DriverModbusTCP(DriverGeneric.CConf DriverConf, DriverGeneric.AreaData[] DataAreaConf)
+        public DriverModbusTCP(CConf DriverConf, AreaData[] DataAreaConf)
         {
             MasterDriverConf = DriverConf;
             MasterDataAreaConf = DataAreaConf;
@@ -72,7 +75,7 @@ namespace DriverCommApp.CommDriver
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
                 int i, SAddress;
-                DriverGeneric.AreaData thisArea;
+                AreaData thisArea;
 
                 //Create the driver object
                 ModTCPObj = new ModbusClient(MasterDriverConf.Address, MasterDriverConf.portTCP);
@@ -152,11 +155,11 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Reads data from the Server Device.</summary>
-        public int Read(ref DriverGeneric.DataExt[] DataOut)
+        public int Read(ref DataExt[] DataOut)
         {
             int i, j, jj, SAddress, retVar;
             uint highWord, lowWord;
-            DriverGeneric.AreaData thisArea;
+            AreaData thisArea;
             retVar = -1;
 
             //If is not initialized and not connected return  error.
@@ -220,11 +223,11 @@ namespace DriverCommApp.CommDriver
                                     break;
                                 case DriverConfig.DatType.Byte:
                                     if (DataOut[i].Data.dByte.Length > j)
-                                        DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & DriverGeneric.MaskByte);
+                                        DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & MaskByte);
                                     break;
                                 case DriverConfig.DatType.Word:
                                     if (DataOut[i].Data.dWord.Length > j)
-                                        DataOut[i].Data.dWord[j] = (ushort)(IntData[i].dInt[j] & DriverGeneric.MaskWord);
+                                        DataOut[i].Data.dWord[j] = (ushort)(IntData[i].dInt[j] & MaskWord);
                                     break;
                                 case DriverConfig.DatType.DWord:
                                 case DriverConfig.DatType.Real:
@@ -232,13 +235,13 @@ namespace DriverCommApp.CommDriver
                                     //Endianess of the double word.
                                     if (RegOrder == ModbusClient.RegisterOrder.HighLow)
                                     {
-                                        highWord = ((uint)IntData[i].dInt[jj] & DriverGeneric.MaskWord) << 16;
-                                        lowWord = ((uint)IntData[i].dInt[(jj + 1)] & DriverGeneric.MaskWord);
+                                        highWord = ((uint)IntData[i].dInt[jj] & MaskWord) << 16;
+                                        lowWord = ((uint)IntData[i].dInt[(jj + 1)] & MaskWord);
                                     }
                                     else
                                     {
-                                        highWord = ((uint)IntData[i].dInt[jj] & DriverGeneric.MaskWord);
-                                        lowWord = ((uint)IntData[i].dInt[(jj + 1)] & DriverGeneric.MaskWord) << 16;
+                                        highWord = ((uint)IntData[i].dInt[jj] & MaskWord);
+                                        lowWord = ((uint)IntData[i].dInt[(jj + 1)] & MaskWord) << 16;
                                     }
 
                                     //Store the value in the DataOut.
@@ -259,11 +262,11 @@ namespace DriverCommApp.CommDriver
                             }
                         } // For j
 
-                        DataOut[i].TimeStamp = DateTime.UtcNow;
+                        DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
                     }
                     else {  //if retVar == 0. Was reading ok?
 
-                        DataOut[i].TimeStamp = DateTime.MinValue;
+                        DataOut[i].NowTimeTicks = 0;
 
                     } //if retVar == 0. Was reading ok?
 
@@ -276,13 +279,11 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DriverGeneric.DataExt[] DataIn)
+        public int Write(DataExt[] DataIn)
         {
-
-
             int i, j, jj, SAddress, retVar;
             uint intFloat;
-            DriverGeneric.AreaData thisArea;
+            AreaData thisArea;
 
             retVar = -1;
 
@@ -325,13 +326,13 @@ namespace DriverCommApp.CommDriver
                                     //Endianess of the double word.
                                     if (RegOrder == ModbusClient.RegisterOrder.HighLow)
                                     {
-                                        IntData[i].dInt[jj] = (int)((DataIn[i].Data.dDWord[j] & DriverGeneric.MaskHWord) >> 16);
-                                        IntData[i].dInt[(jj + 1)] = (int)(DataIn[i].Data.dDWord[j] & DriverGeneric.MaskWord);
+                                        IntData[i].dInt[jj] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
+                                        IntData[i].dInt[(jj + 1)] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
                                     }
                                     else
                                     {
-                                        IntData[i].dInt[jj] = (int)(DataIn[i].Data.dDWord[j] & DriverGeneric.MaskWord);
-                                        IntData[i].dInt[(jj + 1)] = (int)((DataIn[i].Data.dDWord[j] & DriverGeneric.MaskHWord) >> 16);
+                                        IntData[i].dInt[jj] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
+                                        IntData[i].dInt[(jj + 1)] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
                                     }
 
                                     jj = jj + 2;
@@ -348,22 +349,22 @@ namespace DriverCommApp.CommDriver
                                     //Turn ON/OFF the sign bit.
                                     if (DataIn[i].Data.dReal[j] < 0)
                                     {
-                                        intFloat = intFloat | DriverGeneric.MaskNeg;
+                                        intFloat = intFloat | MaskNeg;
                                     }
                                     else {
-                                        intFloat = intFloat & DriverGeneric.MaskiNeg;
+                                        intFloat = intFloat & MaskiNeg;
                                     }
 
                                     //Endianess of the double word.
                                     if (RegOrder == ModbusClient.RegisterOrder.HighLow)
                                     {
-                                        IntData[i].dInt[jj] = (int)((intFloat & DriverGeneric.MaskHWord) >> 16);
-                                        IntData[i].dInt[(jj + 1)] = (int)(intFloat & DriverGeneric.MaskWord);
+                                        IntData[i].dInt[jj] = (int)((intFloat & MaskHWord) >> 16);
+                                        IntData[i].dInt[(jj + 1)] = (int)(intFloat & MaskWord);
                                     }
                                     else
                                     {
-                                        IntData[i].dInt[jj] = (int)(intFloat & DriverGeneric.MaskWord);
-                                        IntData[i].dInt[(jj + 1)] = (int)((intFloat & DriverGeneric.MaskHWord) >> 16);
+                                        IntData[i].dInt[jj] = (int)(intFloat & MaskWord);
+                                        IntData[i].dInt[(jj + 1)] = (int)((intFloat & MaskHWord) >> 16);
                                     }
 
                                     jj = jj + 2;

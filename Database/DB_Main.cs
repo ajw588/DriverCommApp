@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using DriverCommApp.Conf;
 
-namespace DriverCommApp.DBMain
+//This APP Namespace
+using DriverCommApp.Conf;
+using static DriverCommApp.Database.DB_Functions;
+
+namespace DriverCommApp.Database
 {
     /// <summary>
     /// Main Class to handle all the database iteractions.
@@ -14,92 +17,36 @@ namespace DriverCommApp.DBMain
     class DB_Main : IDisposable
     {
         /// <summary>
-        /// Database Server Selection.</summary>
-        public enum SrvSelection
-        {
-            None = 0,
-            MasterOnly,
-            BackupOnly,
-            BothSrv
-        }
-
-        /// <summary>
-        /// Database Server Configuration Type Def.</summary>
-        public struct ServerConf
-        {
-            public string URL;
-            public string Username;
-            public string Passwd;
-            public int Port;
-            public DBConfig.DBServerProtocol Protocol;
-            public DBConfig.DBServerType type;
-            public string DBname; //Database name
-            public bool Enable;
-        }
-
-        /// <summary>
-        /// Database Configuration Type Def.</summary>
-        public struct DBConf
-        {
-            public ServerConf MasterServer;
-            public ServerConf BackupServer;
-            public SrvSelection SrvEn;
-        }
-
-        /// <summary>
         /// Database Configuration.</summary>
         DBConf DatabaseConf;
-
-        /// <summary>
-        /// Driver Complete Configuration Type Def.</summary>
-        public struct DrvConf
-        {
-            public CommDriver.DriverGeneric.CConf DriverConf;
-            public CommDriver.DriverGeneric.AreaData[] AreaConf;
-        }
 
         /// <summary>
         /// Drivers Complete Configuration.</summary>
         List<DrvConf> DriversConf;
 
         /// <summary>
-        /// Struct for multithread database write.</summary>
-        public struct DBWriteStruct
-        {
-            public CommDriver.DriverGeneric.DataExt[] DataWrite;
-            public int numDA;
-            public bool StatAllOK;
-            public string statusMSG;
-
-            public void InitWrite(CommDriver.DriverGeneric.DataExt[] DataObj, int nDA)
-            {
-                numDA = nDA;
-                DataWrite = DataObj;
-            }
-        }
-
-        /// <summary>
         /// Master Write Status.</summary>
-        DBWriteStruct MasterWStat;
+        DBStructData MasterWData;
 
         /// <summary>
         /// Backup Write Status.</summary>
-        DBWriteStruct BackupWStat;
+        DBStructData BackupWData;
 
         /// <summary>
-        /// Struct for multithread Database Read.</summary>
-        public struct DBReadStruct
-        {
-            public bool StatAllOK;
-            public string statusMSG;
-        }
+        /// Backup Write Status.</summary>
+        DBStatStruct MasterWStat;
+
         /// <summary>
         /// Master Read Status.</summary>
-        DBReadStruct MasterRStat;
+        DBStatStruct BackupWStat;
+
+        /// <summary>
+        /// Master Read Status.</summary>
+        DBStatStruct MasterRStat;
 
         /// <summary>
         /// Backup Read Status.</summary>
-        DBReadStruct BackupRStat;
+        DBStatStruct BackupRStat;
 
         /// <summary>
         /// Public var for the amount of variables.</summary>
@@ -107,11 +54,11 @@ namespace DriverCommApp.DBMain
 
         /// <summary>
         /// MySQL Database Master.</summary>
-        DB_MySQL MasterMySQL;
+        DBMySQL.DB_MySQL MasterMySQL;
 
         /// <summary>
         /// MySQL Database Backup.</summary>
-        DB_MySQL BackupMySQL;
+        DBMySQL.DB_MySQL BackupMySQL;
 
         /// <summary>
         /// Flag for initialization.</summary>
@@ -163,7 +110,7 @@ namespace DriverCommApp.DBMain
         /// Add a driver to be managed by this Database.
         /// <param name="DriverConf">Configuration Object for driver config.</param> 
         /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
-        public int addDriver(CommDriver.DriverGeneric.CConf DriverConf, CommDriver.DriverGeneric.AreaData[] DAreaConf)
+        public int addDriver(DriverComm.DriverFunctions.CConf DriverConf, DriverComm.DriverFunctions.AreaData[] DAreaConf)
         {
             int retVal;
             DrvConf NewDriver;
@@ -208,7 +155,7 @@ namespace DriverCommApp.DBMain
                 //Build the Driver and Initialize for MySQL
                 if (DatabaseConf.MasterServer.type == DBConfig.DBServerType.MySQL)
                 {
-                    MasterMySQL = new DB_MySQL(DatabaseConf.MasterServer);
+                    MasterMySQL = new DBMySQL.DB_MySQL(DatabaseConf.MasterServer);
                     MasterMySQL.Initialize(DriversConf, InitialSet);
 
                     if (MasterMySQL.isInitialized) { isInitialized = true; retVal = 1; }
@@ -222,7 +169,7 @@ namespace DriverCommApp.DBMain
                 //Build the Driver and Initialize for MySQL
                 if (DatabaseConf.BackupServer.type == DBConfig.DBServerType.MySQL)
                 {
-                    BackupMySQL = new DB_MySQL(DatabaseConf.BackupServer);
+                    BackupMySQL = new DBMySQL.DB_MySQL(DatabaseConf.BackupServer);
                     BackupMySQL.Initialize(DriversConf, InitialSet);
 
                     if (BackupMySQL.isInitialized) { isInitialized = true; retVal = 2; }
@@ -240,7 +187,7 @@ namespace DriverCommApp.DBMain
         /// Write data into the database.
         /// <param name="DataExt">Data readed from devices to be writen into the database.</param> 
         /// <param name="numDA">Number of Data areas in the object.</param> </summary>
-        public int WriteDB(CommDriver.DriverGeneric.DataExt[] DataExt, int numDA)
+        public int WriteDB(DriverComm.DriverFunctions.DataExt[] DataExt, int numDA)
         {
             int retVal;
             retVal = -1;
@@ -250,21 +197,22 @@ namespace DriverCommApp.DBMain
             if (DatabaseConf.SrvEn == SrvSelection.MasterOnly)
             {
                 //Init the Master Obj
-                MasterWStat.InitWrite(DataExt, numDA);
+                MasterWData.InitWrite(DataExt, numDA);
                 WriteMaster();
                 if (MasterWStat.StatAllOK) retVal = 0;
             }
             else if (DatabaseConf.SrvEn == SrvSelection.BackupOnly)
             {
                 //Init the Backup Obj
-                BackupWStat.InitWrite(DataExt, numDA);
+                BackupWData.InitWrite(DataExt, numDA);
                 WriteBackup();
                 if (BackupWStat.StatAllOK) retVal = 0;
             }
             else if (DatabaseConf.SrvEn == SrvSelection.BothSrv)
             {
                 //Init the Backup Obj
-                BackupWStat.InitWrite(DataExt, numDA);
+                MasterWData.InitWrite(DataExt, numDA);
+                BackupWData.InitWrite(DataExt, numDA);
 
                 //Create the threads
                 Thread MasterServer = new Thread(new ThreadStart(WriteMaster));
@@ -297,7 +245,7 @@ namespace DriverCommApp.DBMain
 
             if (DatabaseConf.MasterServer.type == DBConfig.DBServerType.MySQL)
             {
-                MasterWStat.StatAllOK = MasterMySQL.Write(MasterWStat.DataWrite, MasterWStat.numDA);
+                MasterWStat.StatAllOK = MasterMySQL.Write(MasterWData);
                 MasterWStat.statusMSG = MasterMySQL.status;
             }
         } //END WriteMaster Function
@@ -311,7 +259,7 @@ namespace DriverCommApp.DBMain
 
             if (DatabaseConf.BackupServer.type == DBConfig.DBServerType.MySQL)
             {
-                BackupWStat.StatAllOK = BackupMySQL.Write(BackupWStat.DataWrite, BackupWStat.numDA);
+                BackupWStat.StatAllOK = BackupMySQL.Write(BackupWData);
                 BackupWStat.statusMSG = BackupMySQL.status;
             }
         } // END WriteBackup Function
@@ -320,10 +268,14 @@ namespace DriverCommApp.DBMain
         /// Read data from the database.
         /// <param name="DataExt">Data readed from the database to be writen into the devices.</param> 
         /// <param name="numDA">Number of Data areas in the object.</param> </summary>
-        public int ReadDB(ref CommDriver.DriverGeneric.DataExt[] DataExt, int numDA)
+        public int ReadDB(ref DriverComm.DriverFunctions.DataExt[] DataExt, int numDA)
         {
             int retVal;
+            DBStructData DatatoRead;
             retVal = -1;
+
+            DatatoRead.DataDV = DataExt;
+            DatatoRead.numDA = numDA;
 
             if (!isInitialized) return -2;
 
@@ -331,7 +283,7 @@ namespace DriverCommApp.DBMain
             {
                 if (DatabaseConf.MasterServer.type == DBConfig.DBServerType.MySQL)
                 {
-                    if (MasterMySQL.Read(ref DataExt, numDA))
+                    if (MasterMySQL.Read(ref DatatoRead))
                     {
                         retVal = 0;
                         MasterRStat.StatAllOK = true;
@@ -347,7 +299,7 @@ namespace DriverCommApp.DBMain
             {
                 //Read always reads from master. 
                 //Only in case reading from master fails, then it reads from backup.
-                if (BackupMySQL.Read(ref DataExt, numDA))
+                if (BackupMySQL.Read(ref DatatoRead))
                 {
                     retVal = 1;
                     BackupRStat.StatAllOK = true;
@@ -414,7 +366,7 @@ namespace DriverCommApp.DBMain
             NumVars.nDrivers = DriversConf.Count;
 
             foreach (DrvConf DvDevice in DriversConf)
-                foreach (CommDriver.DriverGeneric.AreaData DeviceDA in DvDevice.AreaConf) { 
+                foreach (DriverComm.DriverFunctions.AreaData DeviceDA in DvDevice.AreaConf) { 
 
                     NumVars.nDA++; //Count the Data Areas (total).
 

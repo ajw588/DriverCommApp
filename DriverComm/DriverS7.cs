@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DriverCommApp.Conf;
 using Snap7;
 
+//This APP namespace
+using static DriverCommApp.DriverComm.DriverFunctions;
+using DriverCommApp.Conf;
 
-namespace DriverCommApp.CommDriver
+namespace DriverCommApp.DriverComm.Siemens7
 {
     class DriverS7
     {
@@ -27,15 +29,15 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Internal data container.</summary>
-        DriverGeneric.DataContainer[] IntData;
+        DataContainer[] IntData;
 
         /// <summary>
         /// Master Driver Conf.</summary>
-        DriverGeneric.CConf MasterDriverConf;
+        CConf MasterDriverConf;
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        DriverGeneric.AreaData[] MasterDataAreaConf;
+        AreaData[] MasterDataAreaConf;
 
         /// <summary>
         /// Driver Status.</summary>
@@ -51,7 +53,7 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Class Constructor.</summary>
-        public DriverS7(DriverGeneric.CConf DriverConf, DriverGeneric.AreaData[] DataAreaConf)
+        public DriverS7(CConf DriverConf, AreaData[] DataAreaConf)
         {
             Status.ResetStat();
 
@@ -66,7 +68,7 @@ namespace DriverCommApp.CommDriver
         public void Initialize()
         {
             int i, datSize, SAddress, tAmount;
-            DriverGeneric.AreaData thisArea;
+            AreaData thisArea;
 
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
@@ -89,7 +91,7 @@ namespace DriverCommApp.CommDriver
                     Reader = new S7MultiVar(Client);
                     Writer = new S7MultiVar(Client);
 
-                    IntData = new DriverGeneric.DataContainer[MasterDriverConf.NDataAreas];
+                    IntData = new DataContainer[MasterDriverConf.NDataAreas];
 
                     //Cicle and configure the data areas
                     for (i = 0; i < MasterDriverConf.NDataAreas; i++)
@@ -246,7 +248,7 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Read the variables from the Server Device.</summary>
-        public int Read(ref DriverGeneric.DataExt[] DataOut)
+        public int Read(ref DataExt[] DataOut)
         {
             int i, j, retVar, Pos, Bit;
             retVar = -1;
@@ -303,10 +305,10 @@ namespace DriverCommApp.CommDriver
                                 }
                             } // For Data Element
                         }
-                        DataOut[i].TimeStamp = DateTime.UtcNow;
+                        DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
                     }
                     else { //IF Read is OK. 
-                        DataOut[i].TimeStamp = DateTime.MinValue;
+                        DataOut[i].NowTimeTicks = 0;
                     }
 
                 } // For DataAreas
@@ -323,7 +325,7 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DriverGeneric.DataExt[] DataIn)
+        public int Write(DataExt[] DataIn)
         {
             int i, j, retVar, Pos, Bit;
             retVar = -1;

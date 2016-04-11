@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Runtime.InteropServices;
 using NationalInstruments.LabVIEW.Interop;
-using DriverCommApp.Conf;
 using System.Net.Sockets;
 using XWaveDv;
 using System.Net;
 
-namespace DriverCommApp.CommDriver
+//This APP Namespace
+using DriverCommApp.Conf;
+using static DriverCommApp.DriverComm.DriverFunctions;
+
+namespace DriverCommApp.DriverComm.XWave
 {
 
     class DriverXWave
@@ -28,7 +30,7 @@ namespace DriverCommApp.CommDriver
 
         /// <summary>
         /// Copy of the Driver Configuration.</summary>
-        private DriverGeneric.CConf MasterDriverConf;
+        private CConf MasterDriverConf;
 
         /// <summary>
         /// Connection parameters.</summary>
@@ -53,7 +55,7 @@ namespace DriverCommApp.CommDriver
         /// <summary>
         /// Class contructor, receives the Driver Configuration.
         /// <param name="DriverConf">Driver Configuration Struct</param></summary>
-        public DriverXWave(DriverGeneric.CConf DriverConf)
+        public DriverXWave(CConf DriverConf)
         {
             //Copy the Driver Configuration.
             MasterDriverConf = DriverConf;
@@ -177,7 +179,7 @@ namespace DriverCommApp.CommDriver
         /// <summary>
         /// Reads data from the Server Device.
         /// /// <param name="DataOut">Object with the data beign readed</param> </summary>
-        public int Read(ref DriverGeneric.DataExt[] DataOut)
+        public int Read(ref DataExt[] DataOut)
         {
             VarTree[,] DataRead;
             IPAddress addressIP;
@@ -227,10 +229,10 @@ namespace DriverCommApp.CommDriver
                 iBool = 0; idWord = 0; isWord = 0; iFloat = 0;
 
                 //Update TimeStamp on DataOut.
-                DataOut[0].TimeStamp = DateTime.UtcNow;
-                DataOut[1].TimeStamp = DataOut[0].TimeStamp;
-                DataOut[2].TimeStamp = DataOut[0].TimeStamp;
-                DataOut[3].TimeStamp = DataOut[0].TimeStamp;
+                DataOut[0].NowTimeTicks = DateTime.UtcNow.Ticks;
+                DataOut[1].NowTimeTicks = DataOut[0].NowTimeTicks;
+                DataOut[2].NowTimeTicks = DataOut[0].NowTimeTicks;
+                DataOut[3].NowTimeTicks = DataOut[0].NowTimeTicks;
 
                 for (i = 0; i < NumVars.nTVars; i++)
                 {
@@ -287,8 +289,8 @@ namespace DriverCommApp.CommDriver
                 return 0;
             }
             else {
-                DataOut[0].TimeStamp = DateTime.MinValue; DataOut[1].TimeStamp = DateTime.MinValue;
-                DataOut[2].TimeStamp = DateTime.MinValue; DataOut[3].TimeStamp = DateTime.MinValue;
+                DataOut[0].NowTimeTicks = 0; DataOut[1].NowTimeTicks = 0;
+                DataOut[2].NowTimeTicks = 0; DataOut[3].NowTimeTicks = 0;
                 return -1;
             }// if CommOK
 
@@ -297,7 +299,7 @@ namespace DriverCommApp.CommDriver
         /// <summary>
         /// Write data to the Server Device.
         /// <param name="DataIn">Object with the data to write</param></summary>
-        public int Write(DriverGeneric.DataExt[] DataIn)
+        public int Write(DataExt[] DataIn)
         {
             return 0;
         }

@@ -4,8 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.ComponentModel;
-using DriverCommApp.Conf;
 using System.Collections.Concurrent;
+
+//This APP Namespaces
+using DriverCommApp.Conf;
+using static DriverCommApp.Historics.Hist_Functions;
+//using static DriverCommApp.DriverComm.DriverFunctions;
 
 namespace DriverCommApp.Historics
 {
@@ -13,51 +17,8 @@ namespace DriverCommApp.Historics
     class HistoricsMain : IDisposable
     {
         /// <summary>
-        /// Historics Database Server Configuration Type Def.</summary>
-        public enum HSrvSelection
-        {
-            None = 0,
-            MasterOnly,
-            BackupOnly,
-            BothSrv
-        }
-
-        /// <summary>
-        /// Historics Database Server Configuration Type Def.</summary>
-        public struct HServerConf
-        {
-            public bool Enable;
-            public float Rate;
-            public string URL;
-            public string Username;
-            public string Passwd;
-            public int Port;
-            public DBConfig.DBServerProtocol Protocol;
-            public DBConfig.DBServerType Type;
-            public string DBname; //Database name
-            public long HistLengh;
-        }
-
-        /// <summary>
-        /// Database Configuration Type Def.</summary>
-        public struct HDBConf
-        {
-            public HServerConf MasterServer;
-            public HServerConf BackupServer;
-            public HSrvSelection SrvEn;
-        }
-
-        /// <summary>
         /// Database Configuration.</summary>
         HDBConf HistConf;
-
-        /// <summary>
-        /// Driver Complete Configuration Type Def.</summary>
-        public struct DrvHConf
-        {
-            public CommDriver.DriverGeneric.CConf DriverConf;
-            public CommDriver.DriverGeneric.AreaData[] AreaConf;
-        }
 
         /// <summary>
         /// Drivers Complete Configuration.
@@ -67,29 +28,12 @@ namespace DriverCommApp.Historics
         ///<summary>
         /// Queue for Data to Write to the Historics Database
         ///</summary>
-        ConcurrentQueue<CommDriver.DriverGeneric.DataExt[]>[] FIFO_Hist;
+        private ConcurrentQueue<DriverComm.DriverFunctions.DataExt>[] FIFO_Hist;
 
         ///<summary>
         /// BackgroundWorker for Historics Queue Processing
         ///</summary>
-        internal BackgroundWorker Worker;
-
-        /// <summary>
-        /// Struct for multithread database write.
-        /// </summary>
-        public struct DBWriteStruct
-        {
-            public CommDriver.DriverGeneric.DataExt[] DataWrite;
-            public int numDA;
-            public bool StatAllOK;
-            public string statusMSG;
-
-            public void InitWrite(CommDriver.DriverGeneric.DataExt[] DataObj, int nDA)
-            {
-                numDA = nDA;
-                DataWrite = DataObj;
-            }
-        }
+        private BackgroundWorker Worker;
 
         /// <summary>
         /// Master Write Container.</summary>
@@ -99,13 +43,6 @@ namespace DriverCommApp.Historics
         /// Backup Write Container.</summary>
         DBWriteStruct BackupWStat;
 
-        /// <summary>
-        /// Struct for multithread Database Read.</summary>
-        public struct StatStruct
-        {
-            public bool StatAllOK;
-            public string statusMSG;
-        }
         /// <summary>
         /// Master Status.</summary>
         public StatStruct GeneralStat;
@@ -117,6 +54,11 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// MySQL Database Backup.</summary>
         Hist_MySQL BackupMySQL;
+
+
+        /// <summary>
+        /// Array with the ID number to indicate the position of the Queue array.</summary>
+        private int[] IdtoPos;
 
         /// <summary>
         /// Workers Running Flag.
@@ -175,7 +117,7 @@ namespace DriverCommApp.Historics
         /// Add a driver to be managed by this Database.
         /// <param name="DriverConf">Configuration Object for driver config.</param> 
         /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
-        public int addDriver(CommDriver.DriverGeneric.CConf DriverConf, CommDriver.DriverGeneric.AreaData[] DAreaConf)
+        public int addDriver(DriverComm.DriverFunctions.CConf DriverConf, DriverComm.DriverFunctions.AreaData[] DAreaConf)
         {
             int retVal;
             DrvHConf NewDriver;
@@ -211,19 +153,18 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int Initialize(bool InitialSet)
         {
-            int retVal, numDrivers;
-
+            int k, retVal, numDrivers;
+            
             retVal = -1;
 
             numDrivers = DriversHistConf.Count;
+
+            IdtoPos = new int[100];
 
             if (numDrivers > 0)
             {
                 if (HistConf.MasterServer.Enable)
                 {
-                    //A queue for each driver.
-                    FIFO_Hist = new ConcurrentQueue<CommDriver.DriverGeneric.DataExt[]>[numDrivers];
-
                     //Build the Driver and Initialize for MySQL
                     if (HistConf.MasterServer.Type == DBConfig.DBServerType.MySQL)
                     {
@@ -252,6 +193,21 @@ namespace DriverCommApp.Historics
                 //Initialize the Worker
                 if ((HistConf.MasterServer.Enable) || (HistConf.BackupServer.Enable))
                 {
+                    //A queue for each driver.
+                    FIFO_Hist = new ConcurrentQueue<DriverComm.DriverFunctions.DataExt>[numDrivers];
+
+                    k = 0; //Init the index.
+                    foreach (DrvHConf DriverConfig in DriversHistConf)
+                    {
+                        if ((DriverConfig.DriverConf.ID>0) && (DriverConfig.DriverConf.ID < 100))
+                        {
+                            IdtoPos[DriverConfig.DriverConf.ID] = k;
+                            FIFO_Hist[k] = new ConcurrentQueue<DriverComm.DriverFunctions.DataExt>();
+                            k++;
+                        }
+                        else { isInitialized = false; retVal = -2; }
+                    }
+
                     //Create the Background workers.
                     Worker = new BackgroundWorker();
 
@@ -277,23 +233,79 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int StartWork()
         {
-            Worker.RunWorkerAsync();
-        }
+            if (!WorkersRuning)
+            {
+                Worker.RunWorkerAsync();
+                WorkersRuning = true;
+                return 0;
+            }
 
-        /// <summary>
-        /// Add new Data Package to the FIFO.
-        /// </summary>
-        public int NewPackage()
-        {
-
+            //Already something running, don't ask again.
+            return -1;
+               
         }
 
         /// <summary>
         /// Stop Worker thread, and close Opened Comms.
         /// </summary>
+        public int StopWork()
+        {
+            if (WorkersRuning)
+            {
+                Worker.CancelAsync();
+                return 0;
+            }
+            return -1;   
+        }
+
+        /// <summary>
+        /// Add new Data Package to the FIFO.
+        /// </summary>
+        public int NewPackage(DriverComm.DriverFunctions.DataExt[] DataFromDv)
+        {
+            int retVal,k;
+
+            retVal = -1000;
+
+            if (isInitialized)
+            {
+                foreach (DriverComm.DriverFunctions.DataExt DataAreaDV in DataFromDv)
+                {
+                    if (DataAreaDV.AreaConf.ToHistorics)
+                    {
+                        if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
+                        {
+                            k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
+                            FIFO_Hist[k].Enqueue(DataAreaDV);
+                        }
+                        else { retVal = -3; }
+                    } // END IF Historics is enabled for this DataArea.
+                }
+                if (retVal<-10) retVal = 0; //Everything is OK
+            } else
+            {
+                //Not initialized
+                retVal = -2;
+            } //END IF isInitialized
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Stop Worker thread, and close Opened Comms.
+        /// </summary>
+        public int StopWork()
+        {
+            if (WorkersRuning)
+                Worker.CancelAsync();
+        }
+
+        /// <summary>
+        /// Close all connections after workers are stopped.
+        /// </summary>
         public int CloseALL()
         {
-
+            
         }
 
         /// <summary>
@@ -310,7 +322,7 @@ namespace DriverCommApp.Historics
             WorkerProgress ToReport;
 
             //Get the Driver for this worker.
-            DriverGeneric thisDriver = (DriverGeneric)e.Argument;
+            DriverGeneric thisDriver = (DriverGeneric) e.Argument;
 
             // Get the BackgroundWorker that raised this event.
             BackgroundWorker worker = sender as BackgroundWorker;
@@ -400,8 +412,7 @@ namespace DriverCommApp.Historics
                 // succeeded.
             }
 
-            //Driver Worker Finished and removed from counter.
-            NumDvRun--;
+
         }
 
         ///<summary>
@@ -433,7 +444,7 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// Write to database.
         /// </summary>
-        private int Write(CommDriver.DriverGeneric.DataExt[] DataExt, int numDA)
+        private int Write(DriverComm.DriverFunctions.DataExt[] DataExt, int numDA)
         {
             int retVal;
             retVal = -1;

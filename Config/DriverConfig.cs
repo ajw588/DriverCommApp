@@ -207,7 +207,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the numbers of drivers in the conf file. </summary>
         [ConfigurationProperty("CountDrivers", DefaultValue = "1", IsKey = false, IsRequired = true)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int CountDrivers
         {
             get { return (int)this["CountDrivers"]; }
@@ -217,7 +217,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the numbers of data areas configured in the conf file. </summary>
         [ConfigurationProperty("CountDataAreas", DefaultValue = "1", IsKey = false, IsRequired = true)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int CountDataAreas
         {
             get { return (int)this["CountDataAreas"]; }
@@ -270,7 +270,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the ID of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("ID", DefaultValue = "1", IsKey = true, IsRequired = true)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int ID
         {
             get { return (int)this["ID"]; }
@@ -341,7 +341,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the Rack of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("Rack", DefaultValue = "0", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 0, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 0, MaxValue = 999)]
         public int Rack
         {
             get { return (int)this["Rack"]; }
@@ -351,7 +351,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the Slot of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("Slot", DefaultValue = "0", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 0, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 0, MaxValue = 999)]
         public int Slot
         {
             get { return (int)this["Slot"]; }
@@ -390,7 +390,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the RTUBaud of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("RTUBaud", DefaultValue = "1", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 999999)]
         public int RTUBaud
         {
             get { return (int)this["RTUBaud"]; }
@@ -400,7 +400,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the RTUParity of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("RTUParity", DefaultValue = "1", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int RTUParity
         {
             get { return (int)this["RTUParity"]; }
@@ -410,7 +410,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the RTUStop of the Driver/Device beign configured. </summary>
         [ConfigurationProperty("RTUStop", DefaultValue = "1", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int RTUStop
         {
             get { return (int)this["RTUStop"]; }
@@ -473,7 +473,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the ID of the Data Area beign configured. </summary>
         [ConfigurationProperty("ID", DefaultValue = "1", IsKey = true, IsRequired = true)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int ID
         {
             get { return (int)this["ID"]; }
@@ -483,7 +483,7 @@ namespace DriverCommApp.Conf
         /// <summary>
         /// Property for the ID_Driver of the Data Area beign configured. </summary>
         [ConfigurationProperty("ID_Driver", DefaultValue = "1", IsKey = false, IsRequired = false)]
-        [IntegerValidator(MinValue = 1, MaxValue = 9999)]
+        [IntegerValidator(MinValue = 1, MaxValue = 99)]
         public int ID_Driver
         {
             get { return (int)this["ID_Driver"]; }

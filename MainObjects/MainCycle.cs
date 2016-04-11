@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using DriverCommApp.Conf;
-using DriverCommApp.CommDriver;
-using DriverCommApp.DBMain;
-using DriverCommApp.Historics;
 using System.ComponentModel;
+
+//This APP Namespace
+using DriverCommApp.Conf;
+using DriverCommApp.DriverComm;
+using DriverCommApp.Database;
+using DriverCommApp.Historics;
 
 namespace DriverCommApp
 {
@@ -637,16 +639,14 @@ namespace DriverCommApp
                         //*********************************************************
                         if (EnHistorics)
                         {
-                            lock (LockHistorics)
-                            {
-                                theHistorics.Write(thisDriver.ExtData, thisDriver.thisDriverConf.NDataAreas);
+                                theHistorics.NewPackage(thisDriver.ExtData);
                                 if (valRet < 0)
                                 {
                                     //Bad Error, no write to backup or master.
                                     StatDB.NewStat(StatT.Warning, thisDriver.thisDriverConf.ID, "Error Historics Write, DV: ");
                                     //theHistorics.GetStatus(out DBmsg);
                                 }
-                            }
+                            
                         }
                     } //END If Reading
                         

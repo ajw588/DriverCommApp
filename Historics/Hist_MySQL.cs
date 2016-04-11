@@ -5,8 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using MySql;
 using MySql.Data.MySqlClient;
+
+//This App Namespace
 using DriverCommApp.Conf;
-using DriverCommApp.DBMain;
+using static DriverCommApp.Historics.Hist_Functions;
 
 namespace DriverCommApp.Historics
 {
@@ -14,29 +16,15 @@ namespace DriverCommApp.Historics
     {
         /// <summary>
         /// Database Server Configuration.</summary>
-        HistoricsMain.HServerConf SrvConf;
+        HServerConf SrvConf;
 
         /// <summary>
         /// Drivers Configuration.</summary>
-        List<HistoricsMain.DrvHConf> DrvConfig;
+        List<DrvHConf> DrvConfig;
 
         /// <summary>
         /// Database MySQL Connection Object.</summary>
         MySqlConnection conn;
-
-        /// <summary>
-        /// TBName and Type Struct.</summary>
-        private struct TableInit
-        {
-            public DB_Main.DrvConf DVConf;
-            public string TBName;
-
-            public void SetTBConfig(DB_Main.DrvConf DriverConfiguration, string Table_Name)
-            {
-                DVConf = DriverConfiguration;
-                TBName = Table_Name;
-            }
-        }
 
         /// <summary>
         /// Exception info from the MySQL library.</summary>
@@ -49,14 +37,14 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// Class Constructor.
         /// <param name="ServerConf">Server Configuration Parameters Object.</param> </summary>
-        public Hist_MySQL(HistoricsMain.HServerConf ServerConf)
+        public Hist_MySQL(HServerConf ServerConf)
         {
             //Keep the Server Configuration
             SrvConf = ServerConf;
             isInitialized = false;
         }
 
-        public void Initialize(bool InitialSet, List<HistoricsMain.DrvHConf> DriversConf)
+        public void Initialize(bool InitialSet, List<DrvHConf> DriversConf)
         {
             string myConnectionString;
             int retVal = 0;
@@ -90,7 +78,7 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// Initialize the Database.
         /// </summary>
-        private int InitDB(List<HistoricsMain.DrvHConf> DriversConf)
+        private int InitDB(List<DrvHConf> DriversConf)
         {
             int i;
             string TBname, STRcmd, STRdrop, idNameSTR;
@@ -98,9 +86,9 @@ namespace DriverCommApp.Historics
             //nTables = TBConf.Length;
 
             //Create tables (one for each driver)
-            foreach (HistoricsMain.DrvHConf Driver in DriversConf)
+            foreach (DrvHConf Driver in DriversConf)
             {
-                foreach (CommDriver.DriverGeneric.AreaData AreaC in Driver.AreaConf)
+                foreach (DriverComm.DriverFunctions.AreaData AreaC in Driver.AreaConf)
                 {
                     //String Table
                     TBname = "HistDrv_" + Driver.DriverConf.ID.ToString("00") + AreaC.ID.ToString("00");
@@ -191,7 +179,7 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// Write data to the database. 
         /// <param name="DataExt">Array Struct with the data to be written in the DB. </param> </summary>
-        public bool Write(CommDriver.DriverGeneric.DataExt[] DataExt)
+        public bool Write(DriverComm.DriverFunctions.DataExt[] DataExt)
         {
             int j, DriverID;
             byte ValStat = 0;
@@ -199,7 +187,7 @@ namespace DriverCommApp.Historics
             long NowTicks = DateTime.UtcNow.Ticks;
 
             //Process each Data Area
-            foreach (CommDriver.DriverGeneric.DataExt DataAreaW in DataExt)
+            foreach (DriverComm.DriverFunctions.DataExt DataAreaW in DataExt)
             {
                 //Check that the Data Area is enabled
                 if (DataAreaW.AreaConf.Enable)
@@ -260,8 +248,6 @@ namespace DriverCommApp.Historics
                 } //IF DataArea is Enabled
             } //For Cicle Data Areas
 
-
-
             return true;
         } //END Write function
 
@@ -276,7 +262,7 @@ namespace DriverCommApp.Historics
             //Calculate the Max Allowed amount of rows in the register per driver.
             numRegVar = (SrvConf.HistLengh * (TimeSpan.TicksPerDay / TimeSpan.TicksPerMillisecond));
 
-            foreach (HistoricsMain.DrvHConf Driver in DrvConfig)
+            foreach (DrvHConf Driver in DrvConfig)
             {
                 TBname = "HistDrv_" + Driver.DriverConf.ID.ToString("00");
                 cmdSTR = "SELECT COUNT(*) FROM " + TBname + ";";

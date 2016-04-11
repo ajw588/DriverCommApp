@@ -4,9 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
-using DriverCommApp.Conf;
-using DriverCommApp.CommDriver;
-using DriverCommApp.DBMain;
 
 namespace DriverCommApp
 {
