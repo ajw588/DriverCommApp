@@ -292,15 +292,6 @@ namespace DriverCommApp.Historics
         }
 
         /// <summary>
-        /// Stop Worker thread, and close Opened Comms.
-        /// </summary>
-        public int StopWork()
-        {
-            if (WorkersRuning)
-                Worker.CancelAsync();
-        }
-
-        /// <summary>
         /// Close all connections after workers are stopped.
         /// </summary>
         public int CloseALL()
