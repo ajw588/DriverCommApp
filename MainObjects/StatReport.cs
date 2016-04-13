@@ -28,9 +28,9 @@ namespace DriverCommApp.Stat
             Reserved = 0,
             Drv1 = 1, Drv2, Drv3, Drv4, Drv5, Drv6, Drv7, Drv8, Drv9, Drv10, Drv11,
             Drv12, Drv13, Drv14, Drv15, Drv16, Drv17, Drv18, Drv19, Drv20, DrvAll = 100,
-            DBall = 200, DB, DBbackup,
-            Histall = 300, Hist, Histbackup,
-            Collection = 1000
+            DBall = 160, DB, DBbackup,
+            Histall = 180, Hist, Histbackup,
+            Collection = 200
         }
 
         /// <summary>
@@ -51,10 +51,10 @@ namespace DriverCommApp.Stat
 
         //Object private vars
         List<ReportProgress> ReportCollection;
-        bool LogFileEN, FirstWrite;
+        bool LogFileEN, UniqueID, FirstWrite;
+        int ListMaxSize = 100, ListToFile = 80, ListMinSize = 30, TimmingIndex=0;
+        long[] TimmingsArray;
         StreamWriter outputFile;
-        int ListMaxSize = 100, ListToFile = 60, ListMinSize = 10;
-
 
         /// <summary>
         ///Parallel Block objects
@@ -63,26 +63,44 @@ namespace DriverCommApp.Stat
 
         /// <summary>
         /// File Log Constructor. </summary>
-        public StatReport(int ID, bool FileLog)
+        public StatReport(int ID, bool FileLog=false, bool UniqueID=false)
+        {
+            //Call the initiator
+            InitReport(ID, FileLog, UniqueID);
+        }
+
+        /// <summary>
+        /// File Log Initializator Constructor. </summary>
+        private void InitReport(int ID, bool FileLog, bool UniqueIDCollection)
         {
             string PathFileLog;
             DateTime timestamp = DateTime.Now;
 
             //Main ID of Report.
-            IDMain = (IDdef)ID;
+            IDMain = (IDdef) ID;
 
             //Flag for the FileLog
-            LogFileEN = FileLog;
-            FirstWrite = true;
+            //Incompatible with the unique ID option
+            if (UniqueIDCollection) { LogFileEN = false; }
+            else { LogFileEN = FileLog; }
+
+            //Flag for the UniqueID
+            UniqueID = UniqueIDCollection;
+
+            //Flag for the first write of the log file
+            if (LogFileEN) FirstWrite = true;
 
             //Init the list
             ReportCollection = new List<ReportProgress>(ListMaxSize);
 
-            // Set a variable to the My Documents path.
-            string myapppath = Environment.CurrentDirectory + @"\Logs\";
+            //Init the timming variable.
+            TimmingsArray = new long[((int) IDdef.Collection+1)];
 
             if (LogFileEN)
             {
+                // Set a variable to the My Documents path.
+                string myapppath = Environment.CurrentDirectory + @"\Logs\";
+
                 if (!Directory.Exists(myapppath))
                     Directory.CreateDirectory(myapppath);
 
@@ -113,15 +131,33 @@ namespace DriverCommApp.Stat
             if (CheckCompatible(IDMain, Summary.ReportID))
                 lock (LockList)
                 {
-                    if ( (IDMain==IDdef.Collection) || (IDMain == IDdef.DrvAll) ||
+
+                    if (UniqueID)
+                        if ( (IDMain==IDdef.Collection) || (IDMain == IDdef.DrvAll) ||
                         (IDMain == IDdef.DBall) || (IDMain == IDdef.Histall))
                     {
                         //Only one type per ID is allowed
                         //Erase any other first.
                         ReportCollection.RemoveAll(h => h.ReportID == Summary.ReportID);
                     }
+
+                    //Add the new element to the list.
                     ReportCollection.Add(Summary);
                     
+                    //Add info to the Timming Array
+                    if (Summary.TimeLoop!=0)
+                    {
+                        if (UniqueID)
+                        {
+                            TimmingsArray[(int)Summary.ReportID] = Summary.TimeLoop;
+                        } else
+                        {
+                            TimmingsArray[TimmingIndex] = Summary.TimeLoop;
+                            TimmingIndex++;
+                            if (TimmingIndex > ((int)Summary.ReportID)) TimmingIndex = 0;
+                        }
+                    }
+
                     cReports = ReportCollection.Count;
 
                     //Remove excess.
@@ -137,16 +173,26 @@ namespace DriverCommApp.Stat
                 }
         }
 
-        //Method to Get the Status with ID Main
+        /// <summary>
+        /// Method to Get the Status with ID Main. </summary>
         public ReportProgress GetSummary()
         {
             return GetSummary((int)IDMain);
         }
 
-        //Method to Get the Status
+        /// <summary>
+        /// Method to Get the Status. </summary>
         public ReportProgress GetSummary(int ID)
         {
+            long[] TimeArray;
             ReportProgress RepoOut = new ReportProgress();
+
+            //Init the RepoOut
+            RepoOut.ReportID = (IDdef)ID;
+            RepoOut.Stat = StatT.Undefined;
+            RepoOut.StatMsg = string.Empty;
+            
+
             lock (LockList)
             {
                 foreach (ReportProgress Repo in ReportCollection)
@@ -154,10 +200,16 @@ namespace DriverCommApp.Stat
                     if (CheckCompatible((IDdef)ID, Repo.ReportID))
                     {
                         // Merge the reports.
-
+                        RepoOut.TimeTicks = Repo.TimeTicks;
+                        RepoOut.Stat = MergeStatus(RepoOut.Stat, Repo.Stat);
+                        RepoOut.StatMsg += RepoToString(Repo) + Environment.NewLine;
                     }
 
                 }
+
+                //Report Average of timmings.
+                TimeArray = GetTimeLoops();
+                RepoOut.TimeLoop = TimeArray[0];
 
             }// END Lock List
 
@@ -252,16 +304,33 @@ namespace DriverCommApp.Stat
         }
 
         /// <summary>
-        /// Returns True if Status is perfect. </summary>
-        public string GetTimeLoops()
+        /// Returns an array with the loop timmings. </summary>
+        public long [] GetTimeLoops()
         {
-            string Timings;
-
+            int i, cAvg; float AverageSum;
+            List<long> Timings= new List<long>((int) IDdef.Collection);
+            cAvg = 0; AverageSum = 0;
             lock (LockList)
             {
+                //First Element is the Array Average.
+                for (i = 0; i < ((int)IDdef.Collection); i++)
+                {
+                    if (TimmingsArray[i] > 0)
+                    {
+                        AverageSum += TimmingsArray[i];
+                        cAvg++;
+                    }
+                }
 
+                Timings.Add((long)(AverageSum/cAvg));
+
+                //Now add the rest of elements.
+                for (i=1; i<((int)IDdef.Collection); i++)
+                {
+                    if (TimmingsArray[i]!=0) Timings.Add(TimmingsArray[i]);
+                }
             }
-            return Timings;
+            return Timings.ToArray();
         }
 
         /// <summary>
@@ -270,6 +339,7 @@ namespace DriverCommApp.Stat
         {
             //Don't lock the List, lock on the caller.
             int i, cReports, Start, Delete;
+            long[] TimeArray;
             string toWrite;
             DateTime timestamp;
             cReports = ReportCollection.Count;
@@ -292,25 +362,69 @@ namespace DriverCommApp.Stat
                 //Save this registers to logFile.
                 if (ReportCollection[i].StatMsg.Length > 3)
                 {
-                    timestamp = new DateTime(ReportCollection[i].TimeTicks);
-
-                    toWrite = ReportCollection[i].Stat.ToString() + "; " +
-                        ReportCollection[i].ReportID.ToString() + "; " +
-                        ReportCollection[i].StatMsg + "; " +
-                        ReportCollection[i].TimeLoop.ToString() + "; " +
-                        timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
-
+                    toWrite = RepoToString(ReportCollection[i]);
                     outputFile.WriteLine(toWrite);
                 }
 
             } //For Registers
+
+            //Time Loop Info
+            timestamp = new DateTime(ReportCollection[i].TimeTicks);
+            TimeArray = GetTimeLoops();
+            toWrite = "Average TimeLoop=  " + TimeArray[0].ToString() + " ms; "+
+                        timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
+
+            outputFile.WriteLine(toWrite);
 
             //Remove some items.
             ReportCollection.RemoveRange(0, Delete);
         }
 
         /// <summary>
-        /// Returns True if Status is perfect. </summary>
+        /// Produce a string with the report Info. </summary>
+        private string RepoToString(ReportProgress RepoIn)
+        {
+            string toWrite;
+            DateTime timestamp;
+
+            //Asing the TimeStamp
+            timestamp = new DateTime(RepoIn.TimeTicks);
+
+            //Generate the String.
+            toWrite = RepoIn.Stat.ToString() + "; " +
+                        RepoIn.ReportID.ToString() + "; " +
+                        RepoIn.StatMsg + "; " +
+                        RepoIn.TimeLoop.ToString() + "; " +
+                        timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
+
+            return toWrite;
+        }
+
+        /// <summary>
+        /// Rules to merge the status. </summary>
+        private StatT MergeStatus( StatT Stat1, StatT Stat2)
+        {
+            StatT OutStat;
+
+            //Default is Undefined.
+            OutStat = StatT.Undefined;
+
+            //Lower priority Good
+            if ((Stat1 == StatT.Good) || (Stat2 == StatT.Good))
+                OutStat = StatT.Good;
+
+            if ((Stat1 == StatT.Warning) || (Stat2 == StatT.Warning))
+                OutStat = StatT.Warning;
+
+            //Highest Priority is Bad.
+            if ((Stat1 == StatT.Bad) || (Stat2 == StatT.Bad))
+                OutStat = StatT.Bad;
+
+            return OutStat;
+        }
+
+        /// <summary>
+        /// Returns True if IDs are compatible. </summary>
         private bool CheckCompatible(IDdef CheckID1, IDdef CheckID2)
         {
             bool retVal = false;
