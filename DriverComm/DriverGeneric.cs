@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 //This APP Namespace
 using DriverCommApp.Conf;
-using static DriverCommApp.DriverComm.DriverFunctions;
 
 namespace DriverCommApp.DriverComm
 {
@@ -14,15 +13,15 @@ namespace DriverCommApp.DriverComm
     {
         /// <summary>
         /// Configuration for the data areas of this driver.</summary>
-        public AreaData[] thisAreaConf;
+        public AreaDataConfClass[] thisAreaConf;
 
         /// <summary>
         /// Configuration for the data areas of this driver.</summary>
-        public CConf thisDriverConf;
+        public DVConfClass thisDriverConf;
 
         /// <summary>
         /// Data container.</summary>
-        public DataExt[] ExtData;
+        public DataExtClass[] ExtData;
 
         /// <summary>
         /// XWave Driver Class.</summary>
@@ -38,7 +37,7 @@ namespace DriverCommApp.DriverComm
 
         /// <summary>
         /// Driver Status.</summary>
-        public MainCycle.StatObj Status;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// Driver Initialization Flag.</summary>
@@ -63,7 +62,7 @@ namespace DriverCommApp.DriverComm
         public DriverGeneric(int DNum, DriverConfig DriverConfigObj)
         {
             int DACount, i, DVindex;
-            thisDriverConf = new CConf();
+            thisDriverConf = new DVConfClass();
 
             //Reading and Writing Flags Init
             iamReading = false;
@@ -120,7 +119,7 @@ namespace DriverCommApp.DriverComm
                     {
                         //Run thru all the DataAreas and copy the ones that has the link to the Driver ID.
                         DACount = 0;
-                        foreach (Conf.DataAreaConf DataAreaElement in DriverConfigObj.DataAreasConf)
+                        foreach (DataAreaConf DataAreaElement in DriverConfigObj.DataAreasConf)
                         {
                             if (DataAreaElement.ID_Driver == thisDriverConf.ID)
                             {
@@ -130,17 +129,21 @@ namespace DriverCommApp.DriverComm
 
                         if (DACount > 0)
                         {
-                            thisAreaConf = new AreaData[DACount];
-                            ExtData = new DataExt[DACount];
+                            thisAreaConf = new AreaDataConfClass[DACount];
+                            ExtData = new DataExtClass[DACount];
                             thisDriverConf.NDataAreas = DACount;
                             i = 0;
-                            foreach (Conf.DataAreaConf DataAreaElement in DriverConfigObj.DataAreasConf)
+                            foreach (DataAreaConf DataAreaElement in DriverConfigObj.DataAreasConf)
                             {
                                 if ((DataAreaElement.ID_Driver == thisDriverConf.ID) && (DataAreaElement.Enable))
                                 {
-                                    thisAreaConf[i].AreaConfig(DataAreaElement.ID, DataAreaElement.ID_Driver,
-                                        DataAreaElement.Enable, DataAreaElement.Write, DataAreaElement.ToHist, DataAreaElement.DataType,
-                                        DataAreaElement.DB_Number, DataAreaElement.StartAddr, DataAreaElement.AmountVar);
+                                    thisAreaConf[i] = new AreaDataConfClass(DataAreaElement.ID, DataAreaElement.ID_Driver,
+                                        DataAreaElement.Enable, DataAreaElement.Write, DataAreaElement.ToHist, 
+                                        DataAreaElement.DataType, DataAreaElement.DB_Number, DataAreaElement.StartAddr, 
+                                        DataAreaElement.AmountVar);
+
+                                    ExtData[i] = new DataExtClass();
+
 
                                     //Asign the configuration section to the data area.
                                     ExtData[i].AreaConf = thisAreaConf[i];
@@ -177,10 +180,8 @@ namespace DriverCommApp.DriverComm
                                                 ExtData[i].Data.dReal = new float[DataAreaElement.AmountVar];
                                                 break;
                                             default:
-                                                //Disable this Data Area, as it was not configured properly.
-                                                ExtData[i].AreaConf.Enable = false;
-                                                thisAreaConf[i].Enable = false;
-                                                //DataAreaElement.Enable = false;
+                                                //Disable this Driver, as it has a configuration problem.
+                                                thisDriverConf.Enable = false;
                                                 break;
                                         }
                                     }
@@ -194,8 +195,8 @@ namespace DriverCommApp.DriverComm
                         //Special case for the XWave Driver.
                         DACount = 4;
                         thisDriverConf.NDataAreas = DACount;
-                        thisAreaConf = new AreaData[DACount];
-                        ExtData = new DataExt[DACount];
+                        thisAreaConf = new AreaDataConfClass[DACount];
+                        ExtData = new DataExtClass[DACount];
 
                         //Reading and Writing Flags (The Xwave only reads data in this edition)
                         iamReading = true;
@@ -212,68 +213,72 @@ namespace DriverCommApp.DriverComm
                         if (ObjDriverXWave.isInitialized)
                         {
                             //Bool Areas.
+                            ExtData[0] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nBool > 0)
                             {
-                                thisAreaConf[0].AreaConfig(1, thisDriverConf.ID, true, false, true, DriverConfig.DatType.Bool,
-                                                0, "0", ObjDriverXWave.NumVars.nBool);
-                                ExtData[0].AreaConf = thisAreaConf[0];
+                                thisAreaConf[0] = new AreaDataConfClass(1, thisDriverConf.ID, true, false, true, 
+                                    DriverConfig.DatType.Bool, 0, "0", ObjDriverXWave.NumVars.nBool);
                                 ExtData[0].Data.dBoolean = new bool[ObjDriverXWave.NumVars.nBool];
                                 ExtData[0].VarNames = new string[ObjDriverXWave.NumVars.nBool];
                                 ExtData[0].FirstInit = false;
                             }
                             else
                             {
-                                thisAreaConf[0].AreaConfig(1, thisDriverConf.ID, false, false, false, DriverConfig.DatType.Bool,
-                                                0, "0", ObjDriverXWave.NumVars.nBool);
+                                thisAreaConf[0] = new AreaDataConfClass(1, thisDriverConf.ID, false, false, false, 
+                                    DriverConfig.DatType.Bool, 0, "0", ObjDriverXWave.NumVars.nBool);
                             }
+                            ExtData[0].AreaConf = thisAreaConf[0];
 
                             //Unsigned Double Word Areas.
+                            ExtData[1] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nDWord > 0)
                             {
-                                thisAreaConf[1].AreaConfig(2, thisDriverConf.ID, true, false, true, DriverConfig.DatType.DWord,
-                                            0, "0", ObjDriverXWave.NumVars.nDWord);
-                                ExtData[1].AreaConf = thisAreaConf[1];
+                                thisAreaConf[1] = new AreaDataConfClass(2, thisDriverConf.ID, true, false, true, 
+                                    DriverConfig.DatType.DWord, 0, "0", ObjDriverXWave.NumVars.nDWord);
                                 ExtData[1].Data.dDWord = new UInt32[ObjDriverXWave.NumVars.nDWord];
                                 ExtData[1].VarNames = new string[ObjDriverXWave.NumVars.nDWord];
                                 ExtData[1].FirstInit = false;
                             }
                             else
                             {
-                                thisAreaConf[1].AreaConfig(2, thisDriverConf.ID, false, false, false, DriverConfig.DatType.DWord,
-                                            0, "0", ObjDriverXWave.NumVars.nDWord);
+                                thisAreaConf[1] = new AreaDataConfClass(2, thisDriverConf.ID, false, false, false, 
+                                    DriverConfig.DatType.DWord, 0, "0", ObjDriverXWave.NumVars.nDWord);
                             }
+                            ExtData[1].AreaConf = thisAreaConf[1];
 
                             //Signed Double Word Areas.
+                            ExtData[2] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nsDWord > 0)
                             {
-                                thisAreaConf[2].AreaConfig(3, thisDriverConf.ID, true, false, true, DriverConfig.DatType.sDWord,
-                                            0, "0", ObjDriverXWave.NumVars.nsDWord);
-                                ExtData[2].AreaConf = thisAreaConf[2];
+                                thisAreaConf[2] = new AreaDataConfClass(3, thisDriverConf.ID, true, false, true, 
+                                    DriverConfig.DatType.sDWord, 0, "0", ObjDriverXWave.NumVars.nsDWord);
                                 ExtData[2].Data.dsDWord = new Int32[ObjDriverXWave.NumVars.nsDWord];
                                 ExtData[2].VarNames = new string[ObjDriverXWave.NumVars.nsDWord];
                                 ExtData[2].FirstInit = false;
                             }
                             else
                             {
-                                thisAreaConf[2].AreaConfig(3, thisDriverConf.ID, false, false, false, DriverConfig.DatType.sDWord,
-                                            0, "0", ObjDriverXWave.NumVars.nsDWord);
+                                thisAreaConf[2] = new AreaDataConfClass(3, thisDriverConf.ID, false, false, false, 
+                                    DriverConfig.DatType.sDWord, 0, "0", ObjDriverXWave.NumVars.nsDWord);
                             }
+                            ExtData[2].AreaConf = thisAreaConf[2];
 
                             //Float point Areas.
+                            ExtData[3] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nReal > 0)
                             {
-                                thisAreaConf[3].AreaConfig(4, thisDriverConf.ID, true, false, true, DriverConfig.DatType.Real,
-                                            0, "0", ObjDriverXWave.NumVars.nReal);
-                                ExtData[3].AreaConf = thisAreaConf[3];
+                                thisAreaConf[3] = new AreaDataConfClass(4, thisDriverConf.ID, true, false, true, 
+                                    DriverConfig.DatType.Real, 0, "0", ObjDriverXWave.NumVars.nReal);
                                 ExtData[3].Data.dReal = new float[ObjDriverXWave.NumVars.nReal];
                                 ExtData[3].VarNames = new string[ObjDriverXWave.NumVars.nReal];
                                 ExtData[3].FirstInit = false;
                             }
                             else
                             {
-                                thisAreaConf[3].AreaConfig(4, thisDriverConf.ID, false, false, false, DriverConfig.DatType.Real,
-                                            0, "0", ObjDriverXWave.NumVars.nReal);
+                                thisAreaConf[3] = new AreaDataConfClass(4, thisDriverConf.ID, false, false, false, 
+                                    DriverConfig.DatType.Real, 0, "0", ObjDriverXWave.NumVars.nReal);
                             }
+                            ExtData[3].AreaConf = thisAreaConf[3];
 
                         }// if XWave Driver isInitialized
 
@@ -335,17 +340,17 @@ namespace DriverCommApp.DriverComm
                 {
                     //Read the XWave driver.
                     case DriverConfig.DriverType.XWave:
-                        retVal = ObjDriverXWave.Read(ref ExtData);
+                        retVal = ObjDriverXWave.Read(ExtData);
                         Status = ObjDriverXWave.Status;
                         break;
                     //Read the Siemens driver.
                     case DriverConfig.DriverType.S7_TCP:
-                        retVal = ObjDriverS7.Read(ref ExtData);
+                        retVal = ObjDriverS7.Read(ExtData);
                         Status = ObjDriverS7.Status;
                         break;
                     //Read the Modbus Ethernet driver.
                     case DriverConfig.DriverType.ModbusTCP:
-                        retVal = ObjDriverModTCP.Read(ref ExtData);
+                        retVal = ObjDriverModTCP.Read(ExtData);
                         Status = ObjDriverModTCP.Status;
                         break;
                     //Read the Modbus RTU driver.

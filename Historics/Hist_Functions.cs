@@ -10,12 +10,14 @@ using static DriverCommApp.DriverComm.DriverFunctions;
 
 namespace DriverCommApp.Historics
 {
-    static class Hist_Functions
-    {
 
+    /// <summary>
+    /// Database Configuration Type Def.</summary>
+    public class HistConfClass
+    {
         /// <summary>
-        /// Historics Database Server Configuration Type Def.</summary>
-        public enum HSrvSelection
+        /// Database Server Selection.</summary>
+        public enum SrvSelection
         {
             None = 0,
             MasterOnly,
@@ -24,8 +26,8 @@ namespace DriverCommApp.Historics
         }
 
         /// <summary>
-        /// Historics Database Server Configuration Type Def.</summary>
-        public struct HServerConf
+        /// Database Server Configuration Type Def.</summary>
+        public struct ServerConf
         {
             public bool Enable;
             public float Rate;
@@ -39,64 +41,35 @@ namespace DriverCommApp.Historics
             public long HistLengh;
         }
 
-        /// <summary>
-        /// Database Configuration Type Def.</summary>
-        public struct HDBConf
-        {
-            public HServerConf MasterServer;
-            public HServerConf BackupServer;
-            public HSrvSelection SrvEn;
-        }
+        public readonly ServerConf MasterSrv;
+        public readonly ServerConf BackupSrv;
+        public readonly SrvSelection SrvEn;
+
 
         /// <summary>
-        /// Struct for multithread database write.
-        /// </summary>
-        public struct DBWriteStruct
+        /// Main Cttor.</summary>
+        public HistConfClass(ServerConf Master, ServerConf Backup)
         {
-            public DataExt[] DataWrite;
-            public int numDA;
-            public bool StatAllOK;
-            public string statusMSG;
+            MasterSrv = Master;
+            BackupSrv = Backup;
 
-            public void InitWrite(DataExt[] DataObj, int nDA)
-            {
-                numDA = nDA;
-                DataWrite = DataObj;
-            }
+            SrvEn = SrvSelection.None;
+
+            if (Backup.Enable)
+                SrvEn = SrvSelection.BackupOnly;
+
+            if (Master.Enable)
+                SrvEn = SrvSelection.MasterOnly;
+
+            if (Master.Enable && Backup.Enable)
+                SrvEn = SrvSelection.BothSrv;
         }
+    }
 
-        /// <summary>
-        /// Struct for multithread Database Read.</summary>
-        public struct StatStruct
-        {
-            public bool StatAllOK;
-            public string statusMSG;
-        }
-
-        /*
-         * ########## Deprecated ##############
-        /// <summary>
-        /// TBName and Type Struct.</summary>
-        private struct TableInit
-        {
-            public DB_Main.DrvConf DVConf;
-            public string TBName;
-
-            public void SetTBConfig(DB_Main.DrvConf DriverConfiguration, string Table_Name)
-            {
-                DVConf = DriverConfiguration;
-                TBName = Table_Name;
-            }
-        }
-        */
-
-        /// <summary>
-        /// Driver Complete Configuration Type Def.</summary>
-        public struct DrvHConf
-        {
-            public CConf DriverConf;
-            public AreaData[] AreaConf;
-        }
+    /// <summary>
+    /// Static Functions and Definitions for the Historics.</summary>
+    static class Hist_Functions
+    {
 
         
     }

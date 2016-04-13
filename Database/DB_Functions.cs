@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 
 //This APP Namespace
 using DriverCommApp.Conf;
-using static DriverCommApp.DriverComm.DriverFunctions;
+using DriverCommApp.DriverComm;
 
 namespace DriverCommApp.Database
 {
-    static class DB_Functions
+    /// <summary>
+    /// Database Configuration Type Def.</summary>
+    public class DBConfClass
     {
         /// <summary>
         /// Database Server Selection.</summary>
@@ -36,43 +38,36 @@ namespace DriverCommApp.Database
             public bool Enable;
         }
 
-        /// <summary>
-        /// Database Configuration Type Def.</summary>
-        public struct DBConf
-        {
-            public ServerConf MasterServer;
-            public ServerConf BackupServer;
-            public SrvSelection SrvEn;
-        }
+        public readonly ServerConf MasterSrv;
+        public readonly ServerConf BackupSrv;
+        public readonly SrvSelection SrvEn;
+
 
         /// <summary>
-        /// Struct for multithread database write.</summary>
-        public struct DBStructData
+        /// Main Cttor.</summary>
+        public DBConfClass(ServerConf Master, ServerConf Backup)
         {
-            public DataExt[] DataDV;
-            public int numDA;
+            MasterSrv = Master;
+            BackupSrv = Backup;
 
-            public void InitWrite(DataExt[] DataObj, int nDA)
-            {
-                numDA = nDA;
-                DataDV = DataObj;
-            }
-        }
+            SrvEn = SrvSelection.None;
 
-        /// <summary>
-        /// Struct for multithread Database Read.</summary>
-        public struct DBStatStruct
-        {
-            public bool StatAllOK;
-            public string statusMSG;
-        }
+            if (Backup.Enable)
+                SrvEn = SrvSelection.BackupOnly;
 
-        /// <summary>
-        /// Driver Complete Configuration Type Def.</summary>
-        public struct DrvConf
-        {
-            public CConf DriverConf;
-            public AreaData[] AreaConf;
+            if (Master.Enable)
+                SrvEn = SrvSelection.MasterOnly;
+
+            if (Master.Enable && Backup.Enable)
+                SrvEn = SrvSelection.BothSrv;
         }
+    }
+
+
+    static class DB_Functions
+    {
+        
+
+        
     }
 }

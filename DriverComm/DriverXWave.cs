@@ -30,7 +30,7 @@ namespace DriverCommApp.DriverComm.XWave
 
         /// <summary>
         /// Copy of the Driver Configuration.</summary>
-        private CConf MasterDriverConf;
+        private DVConfClass MasterDriverConf;
 
         /// <summary>
         /// Connection parameters.</summary>
@@ -42,7 +42,7 @@ namespace DriverCommApp.DriverComm.XWave
 
         /// <summary>
         /// Driver Status.</summary>
-        public MainCycle.StatObj Status;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// Flag for Driver Initialization.</summary>
@@ -55,7 +55,7 @@ namespace DriverCommApp.DriverComm.XWave
         /// <summary>
         /// Class contructor, receives the Driver Configuration.
         /// <param name="DriverConf">Driver Configuration Struct</param></summary>
-        public DriverXWave(CConf DriverConf)
+        public DriverXWave(DVConfClass DriverConf)
         {
             //Copy the Driver Configuration.
             MasterDriverConf = DriverConf;
@@ -63,7 +63,7 @@ namespace DriverCommApp.DriverComm.XWave
             NumVars = new DriverConfig.nVars();
             DataInit = new VarTree[1, 1];
 
-            Status = new MainCycle.StatObj();
+            Status = new Stat.StatReport(MasterDriverConf.ID);
 
             isInitialized = false; isConnected = false;
         }//END Constructor
@@ -179,7 +179,7 @@ namespace DriverCommApp.DriverComm.XWave
         /// <summary>
         /// Reads data from the Server Device.
         /// /// <param name="DataOut">Object with the data beign readed</param> </summary>
-        public int Read(ref DataExt[] DataOut)
+        public int Read(DataExtClass [] DataOut)
         {
             VarTree[,] DataRead;
             IPAddress addressIP;
@@ -299,7 +299,7 @@ namespace DriverCommApp.DriverComm.XWave
         /// <summary>
         /// Write data to the Server Device.
         /// <param name="DataIn">Object with the data to write</param></summary>
-        public int Write(DataExt[] DataIn)
+        public int Write(DataExtClass [] DataIn)
         {
             return 0;
         }
