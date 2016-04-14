@@ -7,6 +7,7 @@ using EasyModbus;
 //This APP Namespace
 using DriverCommApp.Conf;
 using static DriverCommApp.DriverComm.DriverFunctions;
+using StatType = DriverCommApp.Stat.StatReport.StatT;
 
 namespace DriverCommApp.DriverComm.ModbusTCP
 {
@@ -31,11 +32,11 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
         /// <summary>
         /// Master Driver Conf.</summary>
-        CConf MasterDriverConf;
+        DVConfClass MasterDriverConf;
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        AreaData[] MasterDataAreaConf;
+        AreaDataConfClass[] MasterDataAreaConf;
 
         /// <summary>
         /// Flag for Driver Initialization.</summary>
@@ -51,14 +52,17 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
         /// <summary>
         /// Driver Status.</summary>
-        public MainCycle.StatObj Status;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// Class contructor.</summary>
-        public DriverModbusTCP(CConf DriverConf, AreaData[] DataAreaConf)
+        public DriverModbusTCP(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf, Stat.StatReport StatObject)
         {
             MasterDriverConf = DriverConf;
             MasterDataAreaConf = DataAreaConf;
+
+            //The Status Report Object
+            Status = StatObject;
 
             isInitialized = false; isConnected = false;
 
@@ -72,51 +76,70 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         /// Initialize the object class and prepares for the Server Device connection.</summary>
         public void Initialize()
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
                 int i, SAddress;
-                AreaData thisArea;
+                AreaDataConfClass thisArea;
 
-                //Create the driver object
-                ModTCPObj = new ModbusClient(MasterDriverConf.Address, MasterDriverConf.portTCP);
-                ModTCPObj.ConnectionTimeout = MasterDriverConf.Timeout;
-
-                IntData = new ModbusDataConta[MasterDriverConf.NDataAreas];
-
-                //Cicle and configure the data areas
-                for (i = 0; i < MasterDriverConf.NDataAreas; i++)
+                try
                 {
-                    thisArea = MasterDataAreaConf[i];
-                    SAddress = int.Parse(thisArea.StartAddress);
 
-                    if (thisArea.Enable)
+
+                    //Create the driver object
+                    ModTCPObj = new ModbusClient(MasterDriverConf.Address, MasterDriverConf.portTCP);
+                    ModTCPObj.ConnectionTimeout = MasterDriverConf.Timeout;
+
+                    IntData = new ModbusDataConta[MasterDriverConf.NDataAreas];
+
+                    //Cicle and configure the data areas
+                    for (i = 0; i < MasterDriverConf.NDataAreas; i++)
                     {
-                        switch (thisArea.dataType)
+                        thisArea = MasterDataAreaConf[i];
+                        SAddress = int.Parse(thisArea.StartAddress);
+
+                        if (thisArea.Enable)
                         {
-                            case DriverConfig.DatType.Bool:
-                                IntData[i].dBoolean = new bool[thisArea.Amount];
-                                break;
-                            case DriverConfig.DatType.Byte:
-                            case DriverConfig.DatType.Word:
-                                IntData[i].dInt = new int[thisArea.Amount];
-                                break;
-                            case DriverConfig.DatType.DWord:
-                            case DriverConfig.DatType.Real:
-                                IntData[i].dInt = new int[(thisArea.Amount * 2)];
-                                break;
-                        }
-                    }// Area Enable
-                } // For Data Areas
+                            switch (thisArea.dataType)
+                            {
+                                case DriverConfig.DatType.Bool:
+                                    IntData[i].dBoolean = new bool[thisArea.Amount];
+                                    break;
+                                case DriverConfig.DatType.Byte:
+                                case DriverConfig.DatType.Word:
+                                    IntData[i].dInt = new int[thisArea.Amount];
+                                    break;
+                                case DriverConfig.DatType.DWord:
+                                case DriverConfig.DatType.Real:
+                                    IntData[i].dInt = new int[(thisArea.Amount * 2)];
+                                    break;
+                                default:
+                                    Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                    break;
+                            }
+                        }// Area Enable
+                    } // For Data Areas
 
-
-                isInitialized = true;
-            }
+                    Status.NewStat(StatType.Good);
+                    isInitialized = true;
+                }
+                catch (Exception e)
+                {
+                    Status.NewStat(StatType.Bad, e.Message);
+                    isInitialized = false;
+                }
+            } //IF Not Initialized and Driver is Enabled
         }
 
         /// <summary>
         /// Attemps to connect to the Server Device.</summary>
         public void Connect()
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             if (!isConnected)
                 try
                 {
@@ -125,11 +148,12 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                 }
                 catch (Exception e)
                 {
-                    Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                    Status.NewStat(StatType.Warning, e.Message);
                 }
                 finally
                 {
                     isConnected = ModTCPObj.Connected;
+                    Status.NewStat(StatType.Good);
                 }
         } // END Function Connect
 
@@ -137,6 +161,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         /// Disconnect from the Server Device.</summary>
         public void Disconect()
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             try
             {
                 ModTCPObj.Disconnect();
@@ -144,30 +171,41 @@ namespace DriverCommApp.DriverComm.ModbusTCP
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Warning, e.Message);
             }
             finally
             {
                 isConnected = false;
+                Status.NewStat(StatType.Good);
             }
 
         } //End Function Disconnect
 
         /// <summary>
         /// Reads data from the Server Device.</summary>
-        public int Read(ref DataExt[] DataOut)
+        public int Read(DataExtClass[] DataOut)
         {
             int i, j, jj, SAddress, retVar;
             uint highWord, lowWord;
-            AreaData thisArea;
+            AreaDataConfClass thisArea;
             retVar = -1;
 
-            //If is not initialized and not connected return  error.
-            if (!(isInitialized && isConnected)) return retVar;
+            //Reset the Status Buffer
+            Status.ResetStat();
 
+            //If is not initialized and not connected return  error.
+            if (!(isInitialized && isConnected))
+            {
+                Status.NewStat(StatType.Bad, "Not Ready for Reading");
+                return retVar;
+            }
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataOut.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Mismatch");
                 return retVar;
+            }
+                
 
             //Cicle thru Data Areas.
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
@@ -200,11 +238,14 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                                 //Check read complete set of data
                                 if (IntData[i].dInt.Length == (2 * thisArea.Amount)) retVar = 0;
                                 break;
+                            default:
+                                Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                break;
                         }
                     }
                     catch (Exception e)
                     {
-                        Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                        Status.NewStat(StatType.Bad, e.Message);
                         retVar = -10;
                     }
 
@@ -264,8 +305,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
                         DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
                     }
-                    else {  //if retVar == 0. Was reading ok?
-
+                    else
+                    { 
+                        Status.NewStat(StatType.Warning, "ModBus Read error..");
                         DataOut[i].NowTimeTicks = 0;
 
                     } //if retVar == 0. Was reading ok?
@@ -279,20 +321,30 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DataExt[] DataIn)
+        public int Write(DataExtClass[] DataIn)
         {
             int i, j, jj, SAddress, retVar;
             uint intFloat;
-            AreaData thisArea;
+            AreaDataConfClass thisArea;
 
             retVar = -1;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //If is not initialized and not connected return  error
-            if (!(isInitialized && isConnected)) return retVar;
+            if (!(isInitialized && isConnected))
+            {
+                Status.NewStat(StatType.Bad, "Not Ready for Writing");
+                return retVar;
+            }
 
             //If the DataIn and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataIn.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Mismatch");
                 return retVar;
+            }
 
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
             {
@@ -351,7 +403,8 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                                     {
                                         intFloat = intFloat | MaskNeg;
                                     }
-                                    else {
+                                    else
+                                    {
                                         intFloat = intFloat & MaskiNeg;
                                     }
 
@@ -370,6 +423,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                                     jj = jj + 2;
                                 }
                                 break;
+                            default:
+                                Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                break;
                         }
                     } // For j
 
@@ -381,13 +437,17 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                         {
                             ModTCPObj.WriteMultipleCoils(SAddress, IntData[i].dBoolean);
                         }
-                        else {
+                        else
+                        {
                             ModTCPObj.WriteMultipleRegisters(SAddress, IntData[i].dInt);
                         }
+
+                        //Report Good
+                        Status.NewStat(StatType.Good);
                     }
                     catch (Exception e)
                     {
-                        Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                        Status.NewStat(StatType.Bad, e.Message);
                         retVar = -10;
                     }
 

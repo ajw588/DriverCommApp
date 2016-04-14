@@ -10,6 +10,7 @@ using System.Net;
 //This APP Namespace
 using DriverCommApp.Conf;
 using static DriverCommApp.DriverComm.DriverFunctions;
+using StatType = DriverCommApp.Stat.StatReport.StatT;
 
 namespace DriverCommApp.DriverComm.XWave
 {
@@ -33,10 +34,6 @@ namespace DriverCommApp.DriverComm.XWave
         private DVConfClass MasterDriverConf;
 
         /// <summary>
-        /// Connection parameters.</summary>
-        private XwaveConnection XWaveConConfig;
-
-        /// <summary>
         ///Data Container for initialized VarsTree.</summary>
         private VarTree[,] DataInit;
 
@@ -55,7 +52,7 @@ namespace DriverCommApp.DriverComm.XWave
         /// <summary>
         /// Class contructor, receives the Driver Configuration.
         /// <param name="DriverConf">Driver Configuration Struct</param></summary>
-        public DriverXWave(DVConfClass DriverConf)
+        public DriverXWave(DVConfClass DriverConf, Stat.StatReport StatObject)
         {
             //Copy the Driver Configuration.
             MasterDriverConf = DriverConf;
@@ -63,7 +60,8 @@ namespace DriverCommApp.DriverComm.XWave
             NumVars = new DriverConfig.nVars();
             DataInit = new VarTree[1, 1];
 
-            Status = new Stat.StatReport(MasterDriverConf.ID);
+            //The Status Report Object
+            Status = StatObject;
 
             isInitialized = false; isConnected = false;
         }//END Constructor
@@ -75,15 +73,13 @@ namespace DriverCommApp.DriverComm.XWave
             //Flag for the configuration validation.
             bool retVal = false;
 
-            Status.ResetStat(); //Reset the Status Struct
+            //Reset the Status Buffer
+            Status.ResetStat();
 
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
                 if (MasterDriverConf.Address.Length > 6)
                 {
-                    //Configure the IP address for the XWave device.
-                    XWaveConConfig.addr = MasterDriverConf.Address;
-
                     //Check the TCP port for the XWave device comms.
                     //Check the UDP port for the XWave device comms.
                     if ((MasterDriverConf.portTCP > 100) && (MasterDriverConf.portUDP > 100))
@@ -92,6 +88,7 @@ namespace DriverCommApp.DriverComm.XWave
                 else
                 {
                     //Configuration is invalid, wrong IP address.
+                    Status.NewStat(StatType.Warning, "Wrong Config Params, Check Config.");
                     retVal = false;
                 }
 
@@ -100,11 +97,11 @@ namespace DriverCommApp.DriverComm.XWave
                     //Get the Vars Tree initialized from the XML configuration file.
                     if (retVal)
                         retVal = XWaveDriver.Init(MasterDriverConf.DefFile, out NumVars.nTVars, out DataInit);
-                    Status.NewStat(MainCycle.StatT.Good, "");
+                    Status.NewStat(StatType.Good);
                 }
                 catch (Exception e)
                 {
-                    Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                    Status.NewStat(StatType.Bad, e.Message);
                 }
 
                 //Count the vars of each type from the Var Tree.
@@ -123,33 +120,40 @@ namespace DriverCommApp.DriverComm.XWave
         /// Attemps to connect to the Server Device.</summary>
         public void Connect()
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             try
             {
-                if ((isInitialized) & (!isConnected))
+                if (isInitialized)
                 {
-                    TCPconn = new TcpClient();
-                    
-                    //Configure timeouts
-                    TCPconn.ReceiveTimeout = MasterDriverConf.Timeout;
-                    TCPconn.SendTimeout = MasterDriverConf.Timeout;
-
-                    //Connect to the TCP
-                    TCPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portTCP);
-
-                    if (TCPconn.Connected)
+                    if (!isConnected)
                     {
-                        UDPconn = new UdpClient(MasterDriverConf.portUDP);
-                        //UDPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portUDP);
-                    }
+                        TCPconn = new TcpClient();
+
+                        //Configure timeouts
+                        TCPconn.ReceiveTimeout = MasterDriverConf.Timeout;
+                        TCPconn.SendTimeout = MasterDriverConf.Timeout;
+
+                        //Connect to the TCP
+                        TCPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portTCP);
+
+                        if (TCPconn.Connected)
+                        {
+                            UDPconn = new UdpClient(MasterDriverConf.portUDP);
+                            //UDPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portUDP);
+                        }
+
+                    } //If Not Connected
 
                     isConnected = TCPconn.Connected;
-                }
-                //isConnected = XWaveDriver.Connect(XWaveConConfig, out ConnectionID);
-                Status.NewStat(MainCycle.StatT.Good, "");
+                    Status.NewStat(StatType.Good);
+                }// If isInitialized
+
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
             }
         } //END Connect Function
 
@@ -157,6 +161,9 @@ namespace DriverCommApp.DriverComm.XWave
         /// Disconnect from the Server Device.</summary>
         public void Disconect()
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             try
             {
                 if (isConnected)
@@ -167,11 +174,11 @@ namespace DriverCommApp.DriverComm.XWave
                     isConnected = false;
                 }
 
-                Status.NewStat(MainCycle.StatT.Good, "");
+                Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
                 isConnected = false;
             }
         } //END Disconnect Function
@@ -187,16 +194,27 @@ namespace DriverCommApp.DriverComm.XWave
             string returnData = string.Empty; byte[] receiveBytes; bool goodRead;
             retVar = -1;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //Creates an IPEndPoint to record the IP Address and port number of the sender. 
             // The IPEndPoint will allow you to read datagrams sent from any source.
             addressIP = IPAddress.Parse(MasterDriverConf.Address);
             IPEndPoint RemoteIpEndPoint = new IPEndPoint(addressIP, MasterDriverConf.portUDP);
 
             //If is not initialized and not connected return  error
-            if (!(isInitialized && isConnected)) return retVar;
+            if (!(isInitialized && isConnected))
+            {
+                Status.NewStat(StatType.Bad, "Not Ready for Reading");
+                return retVar;
+            }
 
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
-            if (!(DataOut.Length == 4)) return -2;
+            if (!(DataOut.Length == 4))
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Mismatch");
+                return -2;
+            }
 
             //Initialize the read.
             goodRead = false;
@@ -213,12 +231,10 @@ namespace DriverCommApp.DriverComm.XWave
                 {
                     DataRead = DataInit;
                 }
-
-                //XWaveDriver.GetData(ConnectionID, CycleTime, DataInit, out Stat, out DataRead);
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
                 return -10;
             }
 
@@ -282,15 +298,20 @@ namespace DriverCommApp.DriverComm.XWave
                                 iFloat++;
                             }
                             break;
+                        default:
+                            Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                            break;
                     }
                 } //For GetData
 
-                Status.NewStat(MainCycle.StatT.Good, "");
+                Status.NewStat(StatType.Good);
                 return 0;
             }
             else {
                 DataOut[0].NowTimeTicks = 0; DataOut[1].NowTimeTicks = 0;
                 DataOut[2].NowTimeTicks = 0; DataOut[3].NowTimeTicks = 0;
+
+                Status.NewStat(StatType.Warning, "XWave Read error..");
                 return -1;
             }// if CommOK
 
@@ -301,6 +322,9 @@ namespace DriverCommApp.DriverComm.XWave
         /// <param name="DataIn">Object with the data to write</param></summary>
         public int Write(DataExtClass [] DataIn)
         {
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             return 0;
         }
 

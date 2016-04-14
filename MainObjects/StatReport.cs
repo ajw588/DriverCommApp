@@ -202,7 +202,7 @@ namespace DriverCommApp.Stat
                         // Merge the reports.
                         RepoOut.TimeTicks = Repo.TimeTicks;
                         RepoOut.Stat = MergeStatus(RepoOut.Stat, Repo.Stat);
-                        RepoOut.StatMsg += RepoToString(Repo) + Environment.NewLine;
+                        RepoOut.StatMsg += RepoToString(Repo);
                     }
 
                 }
@@ -384,18 +384,22 @@ namespace DriverCommApp.Stat
         /// Produce a string with the report Info. </summary>
         private string RepoToString(ReportProgress RepoIn)
         {
-            string toWrite;
+            string toWrite=string.Empty;
             DateTime timestamp;
 
-            //Asing the TimeStamp
-            timestamp = new DateTime(RepoIn.TimeTicks);
+            if (RepoIn.StatMsg.Length > 3)
+            {
+                //Asing the TimeStamp
+                timestamp = new DateTime(RepoIn.TimeTicks);
 
-            //Generate the String.
-            toWrite = RepoIn.Stat.ToString() + "; " +
-                        RepoIn.ReportID.ToString() + "; " +
-                        RepoIn.StatMsg + "; " +
-                        RepoIn.TimeLoop.ToString() + "; " +
-                        timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
+                //Generate the String.
+                toWrite = RepoIn.Stat.ToString() + "; " +
+                            RepoIn.ReportID.ToString() + "; " +
+                            RepoIn.StatMsg + "; " +
+                            RepoIn.TimeLoop.ToString() + "; " +
+                            timestamp.ToShortDateString() + "_" + 
+                            timestamp.ToShortTimeString()+ ";" + Environment.NewLine;
+            }
 
             return toWrite;
         }

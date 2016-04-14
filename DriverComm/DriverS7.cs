@@ -5,8 +5,9 @@ using System.Text;
 using Snap7;
 
 //This APP namespace
-using static DriverCommApp.DriverComm.DriverFunctions;
 using DriverCommApp.Conf;
+using static DriverCommApp.DriverComm.DriverFunctions;
+using StatType = DriverCommApp.Stat.StatReport.StatT;
 
 namespace DriverCommApp.DriverComm.Siemens7
 {
@@ -29,19 +30,19 @@ namespace DriverCommApp.DriverComm.Siemens7
 
         /// <summary>
         /// Internal data container.</summary>
-        DataContainer[] IntData;
+        DataExtClass.DataContainer[] IntData;
 
         /// <summary>
         /// Master Driver Conf.</summary>
-        CConf MasterDriverConf;
+        DVConfClass MasterDriverConf;
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        AreaData[] MasterDataAreaConf;
+        AreaDataConfClass[] MasterDataAreaConf;
 
         /// <summary>
         /// Driver Status.</summary>
-        public MainCycle.StatObj Status;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// Flag for Driver Initialization.</summary>
@@ -53,12 +54,13 @@ namespace DriverCommApp.DriverComm.Siemens7
 
         /// <summary>
         /// Class Constructor.</summary>
-        public DriverS7(CConf DriverConf, AreaData[] DataAreaConf)
+        public DriverS7(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf, Stat.StatReport StatObject)
         {
-            Status.ResetStat();
-
             MasterDriverConf = DriverConf;
             MasterDataAreaConf = DataAreaConf;
+
+            //The Status Report Object
+            Status = StatObject;
 
             isInitialized = false; isConnected = false;
         }
@@ -68,13 +70,15 @@ namespace DriverCommApp.DriverComm.Siemens7
         public void Initialize()
         {
             int i, datSize, SAddress, tAmount;
-            AreaData thisArea;
+            AreaDataConfClass thisArea;
+
+            //Reset the Status Buffer
+            Status.ResetStat();
 
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
                 try
                 {
-                    
                     // Client creation
                     Client = new S7Client();
 
@@ -91,7 +95,7 @@ namespace DriverCommApp.DriverComm.Siemens7
                     Reader = new S7MultiVar(Client);
                     Writer = new S7MultiVar(Client);
 
-                    IntData = new DataContainer[MasterDriverConf.NDataAreas];
+                    IntData = new DataExtClass.DataContainer[MasterDriverConf.NDataAreas];
 
                     //Cicle and configure the data areas
                     for (i = 0; i < MasterDriverConf.NDataAreas; i++)
@@ -197,16 +201,19 @@ namespace DriverCommApp.DriverComm.Siemens7
                                     }
 
                                     break;
+                                default:
+                                    Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                    break;
                             }
                         }// Area Enable
                     } // For Data Areas
 
                     isInitialized = true;
-                    Status.NewStat(MainCycle.StatT.Good, "");
+                    Status.NewStat(StatType.Good);
                 }
                 catch (Exception e)
                 {
-                    Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                    Status.NewStat(StatType.Bad, e.Message);
                 }
 
             } // IF not isInitialized
@@ -219,14 +226,18 @@ namespace DriverCommApp.DriverComm.Siemens7
         {
             try
             {
+                //Reset the Status Buffer
+                Status.ResetStat();
+
                 if (!isConnected)
                     Client.ConnectTo(MasterDriverConf.Address, MasterDriverConf.Rack, MasterDriverConf.Slot);
                 isConnected = Client.Connected();
-                Status.NewStat(MainCycle.StatT.Good, "");
+
+                Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
             }
         } //END Connect Function
 
@@ -236,29 +247,44 @@ namespace DriverCommApp.DriverComm.Siemens7
         {
             try
             {
+                //Reset the Status Buffer
+                Status.ResetStat();
+
                 Client.Disconnect();
                 isConnected = false;
-                Status.NewStat(MainCycle.StatT.Good, "");
+
+                Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
             }
         } //END Disconnect Function
 
         /// <summary>
         /// Read the variables from the Server Device.</summary>
-        public int Read(ref DataExt[] DataOut)
+        public int Read(DataExtClass[] DataOut)
         {
             int i, j, retVar, Pos, Bit;
             retVar = -1;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //If is not initialized and not connected return  error
-            if (!(isInitialized && isConnected)) return retVar;
+            if (!(isInitialized && isConnected))
+            {
+                Status.NewStat(StatType.Bad, "Not Ready for Reading");
+                return retVar;
+            }
 
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataOut.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Mismatch");
                 return retVar;
+            }
+                
 
             try
             {
@@ -302,22 +328,24 @@ namespace DriverCommApp.DriverComm.Siemens7
                                         if ((DataOut[i].Data.dReal.Length > j) && (IntData[i].dByte.Length > Pos))
                                             DataOut[i].Data.dReal[j] = S7.GetRealAt(IntData[i].dByte, Pos);
                                         break;
+                                    default:
+                                        Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                        break;
                                 }
                             } // For Data Element
                         }
                         DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
+                        Status.NewStat(StatType.Good);
                     }
                     else { //IF Read is OK. 
                         DataOut[i].NowTimeTicks = 0;
+                        Status.NewStat(StatType.Warning, "S7 Read error..");
                     }
-
                 } // For DataAreas
-                if (retVar == 0) { Status.NewStat(MainCycle.StatT.Good, ""); }
-                    else { Status.NewStat(MainCycle.StatT.Warning, "S7 Read error.."); }
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Bad, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
             }
 
             return retVar;
@@ -325,19 +353,30 @@ namespace DriverCommApp.DriverComm.Siemens7
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DataExt[] DataIn)
+        public int Write(DataExtClass[] DataIn)
         {
             int i, j, retVar, Pos, Bit;
             retVar = -1;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //If is not initialized and not connected return  error
-            if (!(isInitialized && isConnected)) return retVar;
+            if (!(isInitialized && isConnected))
+            {
+                Status.NewStat(StatType.Bad, "Not Ready for Writing");
+                return retVar;
+            }
 
             //If the DataIn and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataIn.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Mismatch");
                 return retVar;
+            }
+                
 
-            // Update the DataOut with the readed values.
+            // Copy the data to the S7 library internal variables.
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
             {
                 if (MasterDataAreaConf[i].Enable && MasterDataAreaConf[i].Write)
@@ -381,11 +420,11 @@ namespace DriverCommApp.DriverComm.Siemens7
             {
                 //Write the data and return.
                 retVar = Writer.Write();
-                Status.NewStat(MainCycle.StatT.Good, "");
+                Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(MainCycle.StatT.Warning, e.Message);
+                Status.NewStat(StatType.Bad, e.Message);
             }
             return retVar;
         }
