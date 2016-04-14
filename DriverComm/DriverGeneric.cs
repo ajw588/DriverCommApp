@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 //This APP Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DV;
 using StatType = DriverCommApp.Stat.StatReport.StatT;
 
 namespace DriverCommApp.DriverComm

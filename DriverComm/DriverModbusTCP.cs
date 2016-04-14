@@ -5,7 +5,7 @@ using System.Text;
 using EasyModbus;
 
 //This APP Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DV;
 using static DriverCommApp.DriverComm.DriverFunctions;
 using StatType = DriverCommApp.Stat.StatReport.StatT;
 
@@ -55,7 +55,10 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         public Stat.StatReport Status;
 
         /// <summary>
-        /// Class contructor.</summary>
+        /// Class contructor.
+        /// <param name="DriverConf">Driver Configuration Object</param>
+        /// <param name="DataAreaConf">Data Area Block Configuration Object Array</param>
+        /// <param name="StatObject">Object for Status Reporting</param></summary>
         public DriverModbusTCP(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf, Stat.StatReport StatObject)
         {
             MasterDriverConf = DriverConf;

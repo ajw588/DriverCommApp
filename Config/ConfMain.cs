@@ -59,11 +59,11 @@ namespace DriverCommApp.Conf
 
         /// <summary>
         /// Object for the Driver Configuration. </summary>
-        public DriverConfig ConfDriver;
+        public DV.DriverConfig ConfDriver;
 
         /// <summary>
         /// Object for the Database Configuration. </summary>
-        public DBConfig ConfDB;
+        public DB.DBConfig ConfDB;
 
         /// <summary>
         /// The class constructor. </summary>
@@ -76,10 +76,10 @@ namespace DriverCommApp.Conf
             ret_var = LoadMainConfig();
 
             // Load the Driver Config File
-            ConfDriver = new DriverConfig(MainConf.DriverConfPath);
+            ConfDriver = new DV.DriverConfig(MainConf.DriverConfPath);
 
             // Load the Database Config File
-            ConfDB = new DBConfig(MainConf.DBConfPath);
+            ConfDB = new DB.DBConfig(MainConf.DBConfPath);
 
             if ((ret_var > 0) && (ConfDriver.isInitialized) && (ConfDB.isInitialized))
             {

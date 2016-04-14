@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 //This APP Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DV;
 
 namespace DriverCommApp.DriverComm
 {
@@ -12,12 +12,40 @@ namespace DriverCommApp.DriverComm
     /// Driver Client Configuration.</summary>
     public class DVConfClass
     {
+        /// <summary>Driver Enabled=True </summary>
         public bool Enable;
-        public int ID, CycleTime, NDataAreas, Rack, Slot, portTCP, portUDP;
-        public int RTUid, RTUbaud, RTUparity, RTUstop, Timeout;
+        /// <summary>Driver Identification Number </summary>
+        public int ID;
+        /// <summary> Cycle for Driver Read/Write in ms</summary>
+        public int CycleTime;
+        /// <summary> Number of Data Areas configured for this driver</summary>
+        public int NDataAreas;
+        /// <summary> PLC Rack Number</summary>
+        public int Rack;
+        /// <summary> PLC Slot number</summary>
+        public int Slot;
+        /// <summary> Ethernet Communication Port TCP</summary>
+        public int portTCP;
+        /// <summary> Ethernet Communication Port UDP</summary>
+        public int portUDP;
+        /// <summary> Remote device ID for serial communication</summary>
+        public int RTUid;
+        /// <summary> Serial Communication Baud Rate in bpps</summary>
+        public int RTUbaud;
+        /// <summary> Serial Communication Parity</summary>
+        public int RTUparity;
+        /// <summary> Serial Communication Stop bits</summary>
+        public int RTUstop;
+        /// <summary> Communication Timeout waiting time in ms</summary>
+        public int Timeout;
+        /// <summary> Serial Communication Port</summary>
         public DriverConfig.RTUCommPort portRTU;
+        /// <summary> Remote Device Type</summary>
         public DriverConfig.DriverType Type;
-        public string Address, DefFile;
+        /// <summary> Remote device address, URL or Ip address</summary>
+        public string Address;
+        /// <summary> Variables Symbols Definition (in XWave: VarTree Def) </summary>
+        public string DefFile;
 
         /// <summary>
         /// Fast Method to fill configuration.</summary>
@@ -74,10 +102,24 @@ namespace DriverCommApp.DriverComm
     /// Definition for the data areas configuration.</summary>
     public class AreaDataConfClass
     {
-        public readonly int ID, ID_Driver, Amount, DBnumber;
+        /// <summary> Data Area Block ID</summary>
+        public readonly int ID;
+        /// <summary> Driver ID of the Driver this Data Area Block belows to</summary>
+        public readonly int ID_Driver;
+        /// <summary> Number of Variables in this Data Area Block </summary>
+        public readonly int Amount;
+        /// <summary> Remote Device DB number to Read/Write to</summary>
+        public readonly int DBnumber;
+        /// <summary> Remote Device Address to read the First Variable of this Data Area Block</summary>
         public readonly string StartAddress;
+        /// <summary> Type of Data in the Data Area Block</summary>
         public readonly DriverConfig.DatType dataType;
-        public readonly bool Enable, Write, ToHistorics;
+        /// <summary> Flag to Enable=True this Data Area Block</summary>
+        public readonly bool Enable;
+        /// <summary> Flag to declare this Data Area Block as Read=False, or Write=True in the Remote Device.</summary>
+        public readonly bool Write;
+        /// <summary> Flag to include this Data Area in the Historics=True.</summary>
+        public readonly bool ToHistorics;
 
         /// <summary>
         /// Fast config, and integer to TypeData conversion.</summary>
@@ -147,19 +189,30 @@ namespace DriverCommApp.DriverComm
         /// Definition for the data containers for the driver.</summary>
         public struct DataContainer
         {
+            /// <summary> Boolean Data Array</summary>
             public bool[] dBoolean;
+            /// <summary> Unsigned Byte (8bits) Data Array</summary>
             public byte[] dByte;
+            /// <summary> Unsigned Word (16bits) Data Array</summary>
             public UInt16[] dWord;
+            /// <summary> Unsigned Double Word (32bits) Data Array</summary>
             public UInt32[] dDWord;
+            /// <summary> Signed Double Word (32bits) Data Array</summary>
             public Int32[] dsDWord;
+            /// <summary> Single Precision Floating Point Data Array</summary>
             public float[] dReal;
+            /// <summary> Acii Char Array (String) Data Array</summary>
             public string[] dString;
         }
-
+        /// <summary> Struct for the Read/Write Data</summary>
         public DataContainer Data;
+        /// <summary> Timestamp in Ticks</summary>
         public long NowTimeTicks;
+        /// <summary> Variable Symbolic Names</summary>
         public string[] VarNames;
+        /// <summary> Data Area Block Configuration</summary>
         public AreaDataConfClass AreaConf;
+        /// <summary> Flag for the Data Area Block First Initialization</summary>
         public bool FirstInit;
 
 
@@ -214,7 +267,9 @@ namespace DriverCommApp.DriverComm
     /// Driver Complete Configuration Type Def.</summary>
     public class DVConfAreaConfClass
     {
+        /// <summary> Driver Configuration</summary>
         public DVConfClass DriverConf;
+        /// <summary> Data Area Blocks Configuration Array</summary>
         public AreaDataConfClass[] AreaConf;
     }
 

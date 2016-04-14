@@ -8,7 +8,7 @@ using XWaveDv;
 using System.Net;
 
 //This APP Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DV;
 using static DriverCommApp.DriverComm.DriverFunctions;
 using StatType = DriverCommApp.Stat.StatReport.StatT;
 
@@ -51,7 +51,8 @@ namespace DriverCommApp.DriverComm.XWave
 
         /// <summary>
         /// Class contructor, receives the Driver Configuration.
-        /// <param name="DriverConf">Driver Configuration Struct</param></summary>
+        /// <param name="DriverConf">Driver Configuration Object</param>
+        /// <param name="StatObject">Object for Status Reporting</param></summary>
         public DriverXWave(DVConfClass DriverConf, Stat.StatReport StatObject)
         {
             //Copy the Driver Configuration.

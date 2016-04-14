@@ -235,6 +235,7 @@ namespace DriverCommApp.Database.DBMySQL
         /// <summary>
         /// Read data from the database. 
         /// <param name="Data">Struct ref to object to save data.</param>
+        /// </summary>
         public bool Read(ref DBStructData Data)
         {
             int i, j;
@@ -348,6 +349,7 @@ namespace DriverCommApp.Database.DBMySQL
         /// <summary>
         /// Write data to the database. 
         /// <param name="Data">Struct with the data to be written in the DB.</param>
+        /// </summary>
         public bool Write(DBStructData Data)
         {
             int i, j, k, initialLenght;

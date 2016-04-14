@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Configuration;
 
-namespace DriverCommApp.Conf
+namespace DriverCommApp.Conf.DV
 {
     /// <summary>
     /// Driver Configuration Class.
@@ -15,12 +15,19 @@ namespace DriverCommApp.Conf
         /// Definition of the driver type.</summary>
         public enum DriverType
         {
-            Undefined=0,
+            /// <summary> Undefined driver or Wrong Config</summary>
+            Undefined = 0,
+            /// <summary> MEC XWave (CompactRIO) propietary driver</summary>
             XWave,
+            /// <summary> Siemens ISO TCP Protocol</summary>
             S7_TCP,
+            /// <summary> ModBus Ethernet TCP Protocol</summary>
             ModbusTCP,
+            /// <summary> ModBus Serial RTU Protocol</summary>
             ModbusRTU,
+            /// <summary> Rockwell Automation Allen-Bradley Ethernet Protocol</summary>
             AB_Eth,
+            /// <summary> Generic Protocol</summary>
             Verga
         }
 
@@ -28,13 +35,21 @@ namespace DriverCommApp.Conf
         /// Definition of the data areas type.</summary>
         public enum DatType
         {
+            /// <summary> Undefined Data Type or Wrong Configuration</summary>
             Undefined = 0,
+            /// <summary> Boolean Type Data</summary>
             Bool,
+            /// <summary> Byte (8bits) Type Data</summary>
             Byte,
+            /// <summary> Word (16bits) Type Data</summary>
             Word,
+            /// <summary> Double Word (32bits) Type Data</summary>
             DWord,
+            /// <summary> Signed Double Word (32bits) Type Data</summary>
             sDWord,
+            /// <summary> Real, Floating Point Single Precision Type Data</summary>
             Real,
+            /// <summary> String, Ascii Char Array Type Data</summary>
             String
         }
 
@@ -42,9 +57,26 @@ namespace DriverCommApp.Conf
         /// Definition of the RTU Serial port.</summary>
         public enum RTUCommPort
         {
+            /// <summary>No Port Selected or Wrong Config</summary>
             Undefined = 0,
-            COM1, COM2, COM3, COM4, COM5,
-            COM6, COM7, COM8, COM9
+            /// <summary>COM1 Serial Port</summary>
+            COM1,
+            /// <summary>COM2 Serial Port</summary>
+            COM2,
+            /// <summary>COM3 Serial Port</summary>
+            COM3,
+            /// <summary>COM4 Serial Port</summary>
+            COM4,
+            /// <summary>COM5 Serial Port</summary>
+            COM5,
+            /// <summary>COM6 Serial Port</summary>
+            COM6,
+            /// <summary>COM7 Serial Port</summary>
+            COM7,
+            /// <summary>COM8 Serial Port</summary>
+            COM8,
+            /// <summary>COM9 Serial Port</summary>
+            COM9
         }
 
         /// <summary>
@@ -85,7 +117,10 @@ namespace DriverCommApp.Conf
         /// Type definition for the general settings.</summary>
         public struct GenSettings
         {
-            public int cDrivers, cDataAreas;
+            /// <summary> Counter for the Number of Drivers in the Configuration File</summary>
+            public int cDrivers;
+            /// <summary> Counter for the Number of Data Area Blocks in the Configuration File</summary>
+            public int cDataAreas;
         }
 
         /// <summary>

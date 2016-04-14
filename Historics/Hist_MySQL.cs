@@ -10,7 +10,7 @@ using MySql.Data.MySqlClient;
 using DriverCommApp.Conf;
 using static DriverCommApp.Historics.Hist_Functions;
 
-namespace DriverCommApp.Historics
+namespace DriverCommApp.Historics.HistMySQL
 {
     class Hist_MySQL : IDisposable
     {

@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 
 
-namespace DriverCommApp.Conf
+namespace DriverCommApp.Conf.DB
 {
     /// <summary>
     /// This class loads the settings configured in the DB.config file.</summary>
@@ -20,11 +20,17 @@ namespace DriverCommApp.Conf
         /// Definition of the DB Server Type.</summary>
         public enum DBServerType
         {
+            ///<summary> Undefined Server Type, or Wrong Config</summary>
             Undefined = 0,
+            /// <summary> MySQL Type Database Server</summary>
             MySQL,
+            /// <summary> Fully Complaint Generic SQL Type Database Server</summary>
             SQL,
+            /// <summary> Maria DB Type Database Server</summary>
             Maria,
+            /// <summary> Postgre SQL Type Database Server</summary>
             Postgre,
+            /// <summary> Micrsoft SQL Type Database Server</summary>
             Microsoft
         }
 
@@ -32,10 +38,15 @@ namespace DriverCommApp.Conf
         /// Definition of the DB Server Protocol.</summary>
         public enum DBServerProtocol
         {
+            /// <summary> Undefined Protocol or Wrong Config</summary>
             Undefined = 0,
+            /// <summary> TCP Communication Protocol</summary>
             TCP,
+            /// <summary> Direct Socket Comm Protocol</summary>
             SOCKET,
+            /// <summary> Pipe Type Protocol</summary>
             PIPE,
+            /// <summary> Memory exchange area communication</summary>
             MEMORY
         }
 

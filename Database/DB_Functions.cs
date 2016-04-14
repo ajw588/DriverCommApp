@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 //This APP Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DB;
 using DriverCommApp.DriverComm;
 
 namespace DriverCommApp.Database
@@ -15,12 +15,16 @@ namespace DriverCommApp.Database
     public class DBConfClass
     {
         /// <summary>
-        /// Database Server Selection.</summary>
+        /// Database Server Active Selection.</summary>
         public enum SrvSelection
         {
+            /// <summary> Active Selection of Servers: None Selected</summary>
             None = 0,
+            /// <summary> Active Selection of Servers: Only Master is Active</summary>
             MasterOnly,
+            /// <summary> Active Selection of Servers: Only Backup is Active</summary>
             BackupOnly,
+            /// <summary> Active Selection of Servers: Both Servers Active</summary>
             BothSrv
         }
 
@@ -28,18 +32,29 @@ namespace DriverCommApp.Database
         /// Database Server Configuration Type Def.</summary>
         public struct ServerConf
         {
+            /// <summary> IP Address or URL to locate the server</summary>
             public string URL;
+            /// <summary> Database Username for login </summary>
             public string Username;
+            /// <summary> Database Username Password</summary>
             public string Passwd;
+            /// <summary> Database Communication Server Port</summary>
             public int Port;
+            /// <summary> Database Server Protocol</summary>
             public DBConfig.DBServerProtocol Protocol;
-            public DBConfig.DBServerType type;
-            public string DBname; //Database name
+            /// <summary> Database Server Type</summary>
+            public DBConfig.DBServerType Type;
+            /// <summary> Database Name</summary>
+            public string DBname;
+            /// <summary> Database Server Enable=True property</summary>
             public bool Enable;
         }
 
+        /// <summary> Database Master Server Configuration</summary>
         public readonly ServerConf MasterSrv;
+        /// <summary> Database Backup Server Configuration</summary>
         public readonly ServerConf BackupSrv;
+        /// <summary> Active Selection of Servers</summary>
         public readonly SrvSelection SrvEn;
 
 

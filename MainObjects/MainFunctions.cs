@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DriverCommApp.MainObjects
+namespace DriverCommApp
 {
     static class MainFunctions
     {
