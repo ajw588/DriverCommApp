@@ -81,8 +81,56 @@ namespace DriverCommApp.Database
 
     static class DB_Functions
     {
-        
 
-        
+        /// <summary>
+        /// Generate the String for the ID Name of a Tag/Variable
+        /// </summary>
+        /// <param name="IdDV"> ID of the Driver this variable belows to</param>
+        /// <param name="IdDA">ID of the Data Area Block this variable belows to</param>
+        /// <param name="var">Variable number in the Data Block (Starts at cero-0)</param>
+        /// <returns>String with the variable ID</returns>
+        static public string GetStrIdName(int IdDV, int IdDA, int var)
+        {
+            if (IdDV < 0) IdDV = 0;
+            if (IdDA < 0) IdDA = 0;
+            if (var < 0) var = 0;
+
+            return IdDV.ToString("00") +
+                   IdDA.ToString("00") + var.ToString("0000");
+
+        }
+
+        /// <summary>
+        /// Generate an Integer for the ID Name of a Tag/Variable
+        /// </summary>
+        /// <param name="IdDV"> ID of the Driver this variable belows to</param>
+        /// <param name="IdDA">ID of the Data Area Block this variable belows to</param>
+        /// <param name="var">Variable number in the Data Block (Starts at cero-0)</param>
+        /// <returns>Integer with the variable ID</returns>
+        static public int GetIntIdName(int IdDV, int IdDA, int var)
+        {
+            string IdName;
+
+            if (IdDV < 0) IdDV = 0;
+            if (IdDA < 0) IdDA = 0;
+            if (var < 0) var = 0;
+
+            IdName = IdDV.ToString("00") +
+              IdDA.ToString("00") + var.ToString("0000");
+            return int.Parse(IdName);
+        }
+
+
+        /// <summary>
+        /// Generate the name of the Table for the Actual Values
+        /// </summary>
+        /// <param name="IdDV">ID of the Driver</param>
+        /// <returns>String with the name of the table</returns>
+        static public string GetDVTbName(int IdDV)
+        {
+            if (IdDV < 0) IdDV = 0;
+
+            return "Drv" + IdDV.ToString("00");
+        }
     }
 }

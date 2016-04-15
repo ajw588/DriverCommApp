@@ -268,9 +268,17 @@ namespace DriverCommApp.DriverComm
     public class DVConfAreaConfClass
     {
         /// <summary> Driver Configuration</summary>
-        public DVConfClass DriverConf;
+        public readonly DVConfClass DVConf;
+
         /// <summary> Data Area Blocks Configuration Array</summary>
-        public AreaDataConfClass[] AreaConf;
+        public readonly AreaDataConfClass[] DAConf;
+
+        /// <summary> Class Cttr.</summary>
+        public DVConfAreaConfClass(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf)
+        {
+            DVConf= DriverConf;
+            DAConf=DataAreaConf;
+        }
     }
 
     static class DriverFunctions
