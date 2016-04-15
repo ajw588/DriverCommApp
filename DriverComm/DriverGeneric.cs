@@ -72,7 +72,7 @@ namespace DriverCommApp.DriverComm
             thisDriverConf.Enable = false;
             isInitialized = false;
 
-            Status = new Stat.StatReport(DNum);
+            Status = new Stat.StatReport(DNum, FileLog: true);
             Status.ResetStat();
 
             //Check Driver Number is not out of bounds
