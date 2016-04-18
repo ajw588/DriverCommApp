@@ -7,8 +7,10 @@ using MySql;
 using MySql.Data.MySqlClient;
 
 //This App Namespace
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DB;
 using static DriverCommApp.Historics.Hist_Functions;
+using DatType = DriverCommApp.Conf.DV.DriverConfig.DatType;
+using StatT = DriverCommApp.Stat.StatReport.StatT;
 
 namespace DriverCommApp.Historics.HistMySQL
 {
@@ -16,11 +18,11 @@ namespace DriverCommApp.Historics.HistMySQL
     {
         /// <summary>
         /// Database Server Configuration.</summary>
-        HServerConf SrvConf;
+        HistConfClass.ServerConf SrvConf;
 
         /// <summary>
         /// Drivers Configuration.</summary>
-        List<DrvHConf> DrvConfig;
+        List<DriverComm.DVConfDAConfClass> DrvConfig;
 
         /// <summary>
         /// Database MySQL Connection Object.</summary>
@@ -28,7 +30,7 @@ namespace DriverCommApp.Historics.HistMySQL
 
         /// <summary>
         /// Exception info from the MySQL library.</summary>
-        public string status;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// Initialization flag.</summary>
@@ -36,15 +38,25 @@ namespace DriverCommApp.Historics.HistMySQL
 
         /// <summary>
         /// Class Constructor.
-        /// <param name="ServerConf">Server Configuration Parameters Object.</param> </summary>
-        public Hist_MySQL(HServerConf ServerConf)
+        /// <param name="ServerConf">Server Configuration Parameters Object.</param> 
+        /// <param name="iamMaster">Flag to declare as master or backup Historics.</param></summary>
+        public Hist_MySQL(HistConfClass.ServerConf ServerConf, bool iamMaster)
         {
             //Keep the Server Configuration
             SrvConf = ServerConf;
             isInitialized = false;
+
+            if (iamMaster)
+            {
+                Status = new Stat.StatReport((int)Stat.StatReport.IDdef.Hist);
+            }
+            else
+            {
+                Status = new Stat.StatReport((int)Stat.StatReport.IDdef.Histbackup);
+            }
         }
 
-        public void Initialize(bool InitialSet, List<DrvHConf> DriversConf)
+        public void Initialize(bool InitialSet, List<DriverComm.DVConfDAConfClass> DriversConf)
         {
             string myConnectionString;
             int retVal = 0;
@@ -52,13 +64,16 @@ namespace DriverCommApp.Historics.HistMySQL
             //Reset the flag
             isInitialized = false;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //Keep a copy of the Drivers Configuration.
             DrvConfig = DriversConf;
 
             //myConnectionString = "server=127.0.0.1;uid=root;" + "pwd=12345;database=test;";
             myConnectionString = "SERVER=" + SrvConf.URL + ";" + "PORT=" + SrvConf.Port.ToString() + ";" +
                 "PROTOCOL=" + SrvConf.Protocol.ToString().ToLower() + ";" + "DATABASE=" + SrvConf.DBname + ";" +
-                "UID=" + SrvConf.Username + ";" + "PASSWORD=" + SrvConf.Passwd + ";"+
+                "UID=" + SrvConf.Username + ";" + "PASSWORD=" + SrvConf.Passwd + ";" +
                 "ConnectionTimeout=5; DefaultCommandTimeout=5;Keepalive=3" + ";";
 
             conn = new MySqlConnection(myConnectionString);
@@ -70,7 +85,15 @@ namespace DriverCommApp.Historics.HistMySQL
                 //Database tables initialization.
                 if (InitialSet) retVal = InitDB(DriversConf);
 
-                if (retVal == 0) isInitialized = true;
+                if (retVal == 0)
+                {
+                    isInitialized = true;
+                    Status.NewStat(StatT.Good);
+                }
+                else
+                {
+                    Status.NewStat(StatT.Bad, "Initialization Failed...");
+                }
             }
 
         } //END Func Initialize
@@ -78,7 +101,7 @@ namespace DriverCommApp.Historics.HistMySQL
         /// <summary>
         /// Initialize the Database.
         /// </summary>
-        private int InitDB(List<DrvHConf> DriversConf)
+        private int InitDB(List<DriverComm.DVConfDAConfClass> DriversConf)
         {
             int i;
             string TBname, STRcmd, STRdrop, idNameSTR;
@@ -86,70 +109,70 @@ namespace DriverCommApp.Historics.HistMySQL
             //nTables = TBConf.Length;
 
             //Create tables (one for each driver)
-            foreach (DrvHConf Driver in DriversConf)
+            foreach (DriverComm.DVConfDAConfClass Driver in DriversConf)
             {
-                foreach (DriverComm.DriverFunctions.AreaData AreaC in Driver.AreaConf)
+                foreach (DriverComm.DAConfClass AreaC in Driver.DAConf)
                 {
                     //String Table
-                    TBname = "HistDrv_" + Driver.DriverConf.ID.ToString("00") + AreaC.ID.ToString("00");
+                    TBname = GetHistTbName(Driver.DVConf.ID, AreaC.ID);
                     STRdrop = "DROP TABLES IF EXISTS " + TBname + ";";
 
                     STRcmd = "CREATE TABLE IF NOT EXISTS " + TBname + " ( IdAuto BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,";
 
                     switch (AreaC.dataType)
                     {
-                        case DriverConfig.DatType.Bool:
+                        case DatType.Bool:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " ENUM('True', 'False'),";
                             }
                             break;
-                        case DriverConfig.DatType.Byte:
+                        case DatType.Byte:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " TINYINT UNSIGNED,";
                             }
                             break;
-                        case DriverConfig.DatType.Word:
+                        case DatType.Word:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " SMALLINT UNSIGNED,";
                             }
                             break;
-                        case DriverConfig.DatType.DWord:
+                        case DatType.DWord:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " INT UNSIGNED,";
                             }
                             break;
-                        case DriverConfig.DatType.sDWord:
+                        case DatType.sDWord:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " INT,";
                             }
                             break;
-                        case DriverConfig.DatType.Real:
+                        case DatType.Real:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " FLOAT,";
                             }
                             break;
-                        case DriverConfig.DatType.String:
+                        case DatType.String:
                             for (i = 0; i < AreaC.Amount; i++)
                             {
-                                idNameSTR = "v" + Driver.DriverConf.ID.ToString("00") +
+                                idNameSTR = "v" + Driver.DVConf.ID.ToString("00") +
                                             AreaC.ID.ToString("00") + i.ToString("0000");
                                 STRcmd = STRcmd + " " + idNameSTR + " VARCHAR(255),";
                             }
@@ -179,57 +202,61 @@ namespace DriverCommApp.Historics.HistMySQL
         /// <summary>
         /// Write data to the database. 
         /// <param name="DataExt">Array Struct with the data to be written in the DB. </param> </summary>
-        public bool Write(DriverComm.DriverFunctions.DataExt[] DataExt)
+        public bool Write(DriverComm.DataExtClass[] DataExt)
         {
             int j, DriverID;
             byte ValStat = 0;
             string STRcmd, TBname, idNameSTR, valStr, colSTR;
             long NowTicks = DateTime.UtcNow.Ticks;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //Process each Data Area
-            foreach (DriverComm.DriverFunctions.DataExt DataAreaW in DataExt)
+            foreach (DriverComm.DataExtClass DataAreaW in DataExt)
             {
-                //Check that the Data Area is enabled
-                if (DataAreaW.AreaConf.Enable)
+                //Check that the Data Area is enabled and goes to Historics
+                if ((DataAreaW.AreaConf.Enable) && (DataAreaW.AreaConf.ToHistorics))
                 {
                     DriverID = DataAreaW.AreaConf.ID_Driver;
-                    TBname = "HistDrv_" + DriverID.ToString("00") + DataAreaW.AreaConf.ID.ToString("00");
+                    TBname = GetHistTbName(DriverID, DataAreaW.AreaConf.ID);
                     colSTR = ""; valStr = "";
 
                     if (valStr.Length > 3) valStr = valStr + ", ";
 
                     for (j = 0; j < DataAreaW.AreaConf.Amount; j++)
                     {
-                        idNameSTR = "v" + DriverID.ToString("00") +
-                            DataAreaW.AreaConf.ID.ToString("00") + j.ToString("0000");
+                        idNameSTR = "v" + Database.DB_Functions.GetStrIdName(DriverID, DataAreaW.AreaConf.ID, j); 
+
                         colSTR = colSTR + idNameSTR;
 
                         switch (DataAreaW.AreaConf.dataType)
                         {
-                            case DriverConfig.DatType.Bool:
+                            case DatType.Bool:
                                 valStr = valStr + "'" + DataAreaW.Data.dBoolean[j].ToString() + "'";
                                 break;
-                            case DriverConfig.DatType.Byte:
+                            case DatType.Byte:
                                 valStr = valStr + DataAreaW.Data.dByte[j].ToString();
                                 break;
-                            case DriverConfig.DatType.Word:
+                            case DatType.Word:
                                 valStr = valStr + DataAreaW.Data.dWord[j].ToString();
                                 break;
-                            case DriverConfig.DatType.DWord:
+                            case DatType.DWord:
                                 valStr = valStr + DataAreaW.Data.dDWord[j].ToString();
                                 break;
-                            case DriverConfig.DatType.sDWord:
+                            case DatType.sDWord:
                                 valStr = valStr + DataAreaW.Data.dsDWord[j].ToString();
                                 break;
-                            case DriverConfig.DatType.Real:
+                            case DatType.Real:
                                 if ((float.IsNaN(DataAreaW.Data.dReal[j])) || (float.IsInfinity(DataAreaW.Data.dReal[j])))
                                     DataAreaW.Data.dReal[j] = 0;
                                 valStr = valStr + DataAreaW.Data.dReal[j].ToString();
                                 break;
-                            case DriverConfig.DatType.String:
+                            case DatType.String:
                                 valStr = valStr + "'" + DataAreaW.Data.dString[j] + "'";
                                 break;
                             default:
+                                Status.NewStat(StatT.Warning, "Wrong Data Type, Check Config DA.");
                                 return false;
                                 break;
                         }
@@ -240,15 +267,20 @@ namespace DriverCommApp.Historics.HistMySQL
 
                     } //END For Variable
 
-                    STRcmd = "INSERT LOW_PRIORITY INTO " + TBname + " (" + colSTR + " ValStat, TimeTicks) VALUES (" + 
+                    STRcmd = "INSERT LOW_PRIORITY INTO " + TBname + " (" + colSTR + " ValStat, TimeTicks) VALUES (" +
                         valStr + ValStat.ToString() + ", " + NowTicks.ToString() + ");";
 
                     //Send the query
-                    if (!SQLcmdSingle(STRcmd)) return false;
+                    if (SQLcmdSingle(STRcmd))
+                    {
+                        Status.NewStat(StatT.Good);
+                        return true;
+                    }
                 } //IF DataArea is Enabled
             } //For Cicle Data Areas
 
-            return true;
+            Status.NewStat(StatT.Warning, "Writing Data Failed.");
+            return false;
         } //END Write function
 
         /// <summary>
@@ -259,29 +291,35 @@ namespace DriverCommApp.Historics.HistMySQL
             long numRegVar, nTableRows, toErase;
             string TBname, cmdSTR;
 
+            //Reset the Status Buffer
+            Status.ResetStat();
+
             //Calculate the Max Allowed amount of rows in the register per driver.
             numRegVar = (SrvConf.HistLengh * (TimeSpan.TicksPerDay / TimeSpan.TicksPerMillisecond));
 
-            foreach (DrvHConf Driver in DrvConfig)
-            {
-                TBname = "HistDrv_" + Driver.DriverConf.ID.ToString("00");
-                cmdSTR = "SELECT COUNT(*) FROM " + TBname + ";";
-                nTableRows = SQLreadLong(cmdSTR);
-
-
-                //Calculate the Max Allowed amount of rows in the register per driver.
-                numRegVar = (SrvConf.HistLengh * (TimeSpan.TicksPerDay / TimeSpan.TicksPerMillisecond) / Driver.DriverConf.CycleTime);
-
-                if (nTableRows > (numRegVar + 1000))
+            foreach (DriverComm.DVConfDAConfClass Driver in DrvConfig)
+                foreach (DriverComm.DAConfClass DataArea in Driver.DAConf)
                 {
-                    //Erase some lines.
-                    toErase = nTableRows - numRegVar;
-                    cmdSTR = "DELETE FROM " + TBname +
-                        " WHERE IdAuto IN (SELECT IdAuto FROM " + TBname + " ORDER BY id ASC LIMIT " + toErase.ToString() + ");";
-                    if (!SQLcmdSingle(cmdSTR)) return -1;
-                }
+                    if (DataArea.ToHistorics)
+                    {
+                        TBname = GetHistTbName(Driver.DVConf.ID, DataArea.ID);
+                        cmdSTR = "SELECT COUNT(*) FROM " + TBname + ";";
+                        nTableRows = SQLreadLong(cmdSTR);
 
-            } //FOREACH tables
+
+                        //Calculate the Max Allowed amount of rows in the register per driver.
+                        numRegVar = (SrvConf.HistLengh * (TimeSpan.TicksPerDay / TimeSpan.TicksPerMillisecond) / Driver.DVConf.CycleTime);
+
+                        if (nTableRows > (numRegVar + 1000))
+                        {
+                            //Erase some lines.
+                            toErase = nTableRows - numRegVar;
+                            cmdSTR = "DELETE FROM " + TBname +
+                                " WHERE IdAuto IN (SELECT IdAuto FROM " + TBname + " ORDER BY id ASC LIMIT " + toErase.ToString() + ");";
+                            if (!SQLcmdSingle(cmdSTR)) return -1;
+                        }
+                    }
+                } //FOREACH tables
 
             //SELECT COUNT(*) FROM fooTable;
             //DELETE FROM mytable WHERE id IN (SELECT id FROM mytable ORDER BY id ASC LIMIT 100)
@@ -316,7 +354,8 @@ namespace DriverCommApp.Historics.HistMySQL
                 cmd.Dispose();
                 return true;
             }
-            else {
+            else
+            {
                 return false;
             }
 
@@ -357,7 +396,8 @@ namespace DriverCommApp.Historics.HistMySQL
 
                 return true;
             }
-            else {
+            else
+            {
                 return false;
             }
         } //END SQLcmdMult Function

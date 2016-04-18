@@ -55,7 +55,7 @@ namespace DriverCommApp.Database.DBMySQL
         /// Initialize the Object.
         /// <param name="DriversConf">Driver Configuration and DataAreas (Needed for initial set).</param> 
         /// <param name="InitialSet">Initial set flag (will erase actual tables).</param> </summary>
-        public void Initialize(List<DriverComm.DVConfAreaConfClass> DriversConf, bool InitialSet)
+        public void Initialize(List<DriverComm.DVConfDAConfClass> DriversConf, bool InitialSet)
         {
             string myConnectionString;
             int retVal = 0;
@@ -93,13 +93,13 @@ namespace DriverCommApp.Database.DBMySQL
         /// <summary>
         /// Initialize the Database.
         /// <param name="DriversConf">Driver Configuration and DataAreas (Needed for initial set).</param> </summary>
-        private int InitDB(List<DriverComm.DVConfAreaConfClass> DriversConf)
+        private int InitDB(List<DriverComm.DVConfDAConfClass> DriversConf)
         {
             int j, k;
             string TBname, STRcmd, valStr, idNameSTR;
 
             //Create tables (one for each driver)
-            foreach (DriverComm.DVConfAreaConfClass aDriverConfig in DriversConf)
+            foreach (DriverComm.DVConfDAConfClass aDriverConfig in DriversConf)
             {
                 TBname = "Drv" + aDriverConfig.DVConf.ID.ToString("00");
                 STRcmd = "DROP TABLES IF EXISTS " + TBname + ";";
@@ -457,12 +457,13 @@ namespace DriverCommApp.Database.DBMySQL
                             if (caseSTR.Length > 5)
                             {
                                 STRcmd = STRcmd + caseSTR + " END " + whereSTR + ");";
-
                                 //Send the query
-                                if (!SQLcmdSingle(STRcmd)) return false;
+                                if (!SQLcmdSingle(STRcmd))
+                                {
+                                    Status.NewStat(StatT.Warning, "Failed to Init Symbolics/Descriptions.");
+                                    Data[i].FirstInit = true; //Reset the flag}
+                                }
                             }
-
-                            Data[i].FirstInit = true; //Reset the flag
                         } //END If FirstWrite
 
                         // Write the data readed from the devices.
@@ -571,8 +572,14 @@ namespace DriverCommApp.Database.DBMySQL
                 }// For cicle thru Data Areas
 
                 //Send the query
-                if (k > 0) { if (SQLcmdMult(STRcmdM, numDA)) return true; }
-                else { return false; }
+                if (k > 0)
+                {
+                    if (SQLcmdMult(STRcmdM, numDA))
+                    {
+                        Status.NewStat(StatT.Good);
+                        return true;
+                    }
+                }
 
             }//END If Data!=null
 

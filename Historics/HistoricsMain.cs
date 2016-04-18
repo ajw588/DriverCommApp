@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 using System.Threading;
 using System.ComponentModel;
 using System.Collections.Concurrent;
 
 //This APP Namespaces
-using DriverCommApp.Conf;
+using DriverCommApp.Conf.DB;
 using static DriverCommApp.Historics.Hist_Functions;
-//using static DriverCommApp.DriverComm.DriverFunctions;
+using StatT = DriverCommApp.Stat.StatReport.StatT;
+using DatType = DriverCommApp.Conf.DV.DriverConfig.DatType;
+
 
 namespace DriverCommApp.Historics
 {
@@ -18,17 +20,17 @@ namespace DriverCommApp.Historics
     {
         /// <summary>
         /// Database Configuration.</summary>
-        HDBConf HistConf;
+        HistConfClass HistConf;
 
         /// <summary>
         /// Drivers Complete Configuration.
         /// </summary>
-        List<DrvHConf> DriversHistConf;
+        List<DriverComm.DVConfDAConfClass> DriversHistConf;
 
         ///<summary>
         /// Queue for Data to Write to the Historics Database
         ///</summary>
-        private ConcurrentQueue<DriverComm.DriverFunctions.DataExt>[] FIFO_Hist;
+        private ConcurrentQueue<DriverComm.DataExtClass>[] FIFO_Hist;
 
         ///<summary>
         /// BackgroundWorker for Historics Queue Processing
@@ -36,25 +38,16 @@ namespace DriverCommApp.Historics
         private BackgroundWorker Worker;
 
         /// <summary>
-        /// Master Write Container.</summary>
-        DBWriteStruct MasterWStat;
-
-        /// <summary>
-        /// Backup Write Container.</summary>
-        DBWriteStruct BackupWStat;
-
-        /// <summary>
         /// Master Status.</summary>
-        public StatStruct GeneralStat;
+        public Stat.StatReport Status;
 
         /// <summary>
         /// MySQL Database Master.</summary>
-        Hist_MySQL MasterMySQL;
+        HistMySQL.Hist_MySQL MasterMySQL;
 
         /// <summary>
         /// MySQL Database Backup.</summary>
-        Hist_MySQL BackupMySQL;
-
+        HistMySQL.Hist_MySQL BackupMySQL;
 
         /// <summary>
         /// Array with the ID number to indicate the position of the Queue array.</summary>
@@ -74,41 +67,40 @@ namespace DriverCommApp.Historics
         /// <param name="DBConfigFile">Configuration Object.</param> </summary>
         public HistoricsMain(DBConfig DBConfigFile)
         {
+            HistConfClass.ServerConf Master, Backup;
+
             //Create the list of drivers.
-            DriversHistConf = new List<DrvHConf>(1);
+            DriversHistConf = new List<DriverComm.DVConfDAConfClass>(1);
 
             //Master Server
-            HistConf.MasterServer.Enable = DBConfigFile.HistMaster.Enable;
-            HistConf.MasterServer.DBname = DBConfigFile.HistMaster.DBname;
-            HistConf.MasterServer.URL = DBConfigFile.HistMaster.URL;
-            HistConf.MasterServer.Username = DBConfigFile.HistMaster.User1;
-            HistConf.MasterServer.Passwd = DBConfigFile.HistMaster.Passw1;
-            HistConf.MasterServer.Port = DBConfigFile.HistMaster.Port;
-            HistConf.MasterServer.Protocol = DBConfigFile.HistMaster.Protocol;
-            HistConf.MasterServer.Rate = DBConfigFile.HistMaster.Rate;
-            HistConf.MasterServer.Type = DBConfigFile.HistMaster.Type;
-            HistConf.MasterServer.HistLengh = DBConfigFile.HistMaster.HistLenght;
+            Master.Enable = DBConfigFile.HistMaster.Enable;
+            Master.DBname = DBConfigFile.HistMaster.DBname;
+            Master.URL = DBConfigFile.HistMaster.URL;
+            Master.Username = DBConfigFile.HistMaster.User1;
+            Master.Passwd = DBConfigFile.HistMaster.Passw1;
+            Master.Port = DBConfigFile.HistMaster.Port;
+            Master.Protocol = DBConfigFile.HistMaster.Protocol;
+            Master.Rate = DBConfigFile.HistMaster.Rate;
+            Master.Type = DBConfigFile.HistMaster.Type;
+            Master.HistLengh = DBConfigFile.HistMaster.HistLenght;
 
             //Backup Server
-            HistConf.BackupServer.Enable = DBConfigFile.HistBackup.Enable;
-            HistConf.BackupServer.DBname = DBConfigFile.HistBackup.DBname;
-            HistConf.BackupServer.URL = DBConfigFile.HistBackup.URL;
-            HistConf.BackupServer.Username = DBConfigFile.HistBackup.User1;
-            HistConf.BackupServer.Passwd = DBConfigFile.HistBackup.Passw1;
-            HistConf.BackupServer.Port = DBConfigFile.HistBackup.Port;
-            HistConf.BackupServer.Protocol = DBConfigFile.HistBackup.Protocol;
-            HistConf.BackupServer.Rate = DBConfigFile.HistBackup.Rate;
-            HistConf.BackupServer.Type = DBConfigFile.HistBackup.Type;
-            HistConf.BackupServer.HistLengh = DBConfigFile.HistBackup.HistLenght;
+            Backup.Enable = DBConfigFile.HistBackup.Enable;
+            Backup.DBname = DBConfigFile.HistBackup.DBname;
+            Backup.URL = DBConfigFile.HistBackup.URL;
+            Backup.Username = DBConfigFile.HistBackup.User1;
+            Backup.Passwd = DBConfigFile.HistBackup.Passw1;
+            Backup.Port = DBConfigFile.HistBackup.Port;
+            Backup.Protocol = DBConfigFile.HistBackup.Protocol;
+            Backup.Rate = DBConfigFile.HistBackup.Rate;
+            Backup.Type = DBConfigFile.HistBackup.Type;
+            Backup.HistLengh = DBConfigFile.HistBackup.HistLenght;
 
-            //Check the server selection
-            HistConf.SrvEn = HSrvSelection.None;
-            if (HistConf.MasterServer.Enable && HistConf.BackupServer.Enable)
-                HistConf.SrvEn = HSrvSelection.BothSrv;
-            if (HistConf.MasterServer.Enable && !HistConf.BackupServer.Enable)
-                HistConf.SrvEn = HSrvSelection.MasterOnly;
-            if (!HistConf.MasterServer.Enable && HistConf.BackupServer.Enable)
-                HistConf.SrvEn = HSrvSelection.BackupOnly;
+            //Create the conf object.
+            HistConf = new HistConfClass(Master, Backup);
+
+            //The Status Object
+            Status = new Stat.StatReport((int)Stat.StatReport.IDdef.Histall, FileLog: true);
 
             isInitialized = false;
         } //END Class Constructor
@@ -117,33 +109,32 @@ namespace DriverCommApp.Historics
         /// Add a driver to be managed by this Database.
         /// <param name="DriverConf">Configuration Object for driver config.</param> 
         /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
-        public int addDriver(DriverComm.DriverFunctions.CConf DriverConf, DriverComm.DriverFunctions.AreaData[] DAreaConf)
+        public int addDriver(DriverComm.DVConfClass DriverConf, DriverComm.DAConfClass[] DAreaConf)
         {
-            int retVal;
-            DrvHConf NewDriver;
+            int retVal=-1;
+            DriverComm.DVConfDAConfClass NewDriver;
 
-            if (DAreaConf.Length > 0)
+            if ((DriverConf != null) && (DAreaConf != null))
+                if (DAreaConf.Length > 0)
             {
-                NewDriver.DriverConf = DriverConf;
-                NewDriver.AreaConf = DAreaConf;
-                DriversHistConf.Add(NewDriver);
+                    NewDriver = new DriverComm.DVConfDAConfClass(DriverConf, DAreaConf);
 
-                //Adding a new driver while initialized will require new initzialization.
-                if (isInitialized)
-                {
-                    isInitialized = false;
-                    retVal = 1;
-                }
-                else
-                {
-                    retVal = 0;
-                }
+                    DriversHistConf.Add(NewDriver);
 
-            }
-            else
-            {
-                retVal = -1;
-            }
+                    //Adding a new driver while initialized will require new initzialization.
+                    if (isInitialized)
+                    {
+                        Status.NewStat(StatT.Warning, "Hist Object Requires to Re-Initialize");
+                        isInitialized = false;
+                        retVal = 1;
+                    }
+                    else
+                    {
+                        Status.NewStat(StatT.Good, "DV Added: " + NewDriver.DVConf.ID.ToString("00"));
+                        retVal = 0;
+                    }
+
+                }
 
             return retVal;
         } //END Add Driver function.
@@ -161,51 +152,79 @@ namespace DriverCommApp.Historics
 
             IdtoPos = new int[100];
 
+            //Init the array
+            for (k = 0; k < 100; k++) IdtoPos[k] = -10;
+
             if (numDrivers > 0)
             {
-                if (HistConf.MasterServer.Enable)
+                if (HistConf.MasterSrv.Enable)
                 {
                     //Build the Driver and Initialize for MySQL
-                    if (HistConf.MasterServer.Type == DBConfig.DBServerType.MySQL)
+                    if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                     {
-                        MasterMySQL = new Hist_MySQL(HistConf.MasterServer);
+                        MasterMySQL = new HistMySQL.Hist_MySQL(HistConf.MasterSrv);
                         MasterMySQL.Initialize(InitialSet, DriversHistConf);
 
-                        if (MasterMySQL.isInitialized) { isInitialized = true; retVal = 1; }
-                        else { isInitialized = false; retVal = -1; }
+                        if (MasterMySQL.isInitialized)
+                        {
+                            Status.NewStat(StatT.Good, "Master Srv Initialized.");
+                            isInitialized = true; retVal = 1;
+                        }
+                        else
+                        {
+                            Status.NewStat(StatT.Bad, "Master Srv Init Failed.");
+                            isInitialized = false; retVal = -1;
+                        }
 
                     } //END IF MySQL Initialization.
                 } //Master Server Initialization.
 
-                if (HistConf.BackupServer.Enable)
+                if (HistConf.BackupSrv.Enable)
                 {
-                    //Build the Driver and Initialize for MySQL
-                    if (HistConf.BackupServer.Type == DBConfig.DBServerType.MySQL)
+                    //Build the Driver and Initialize for MySQL.
+                    if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                     {
-                        BackupMySQL = new Hist_MySQL(HistConf.BackupServer);
+                        BackupMySQL = new HistMySQL.Hist_MySQL(HistConf.BackupSrv);
                         BackupMySQL.Initialize(InitialSet, DriversHistConf);
 
-                        if (BackupMySQL.isInitialized) { isInitialized = true; retVal = 2; }
-                        else { isInitialized = false; retVal = -2; }
+                        if (BackupMySQL.isInitialized)
+                        {
+                            Status.NewStat(StatT.Good, "Backup Srv Initialized.");
+                            isInitialized = true; retVal = 2;
+                        }
+                        else
+                        {
+                            Status.NewStat(StatT.Bad, "Backup Srv Init Failed.");
+                            isInitialized = false; retVal = -2;
+                        }
                     } //END IF MySQL Initialization.
                 } //Backup Server Initialization.
 
                 //Initialize the Worker
-                if ((HistConf.MasterServer.Enable) || (HistConf.BackupServer.Enable))
+                if ((HistConf.MasterSrv.Enable) || (HistConf.BackupSrv.Enable))
                 {
                     //A queue for each driver.
-                    FIFO_Hist = new ConcurrentQueue<DriverComm.DriverFunctions.DataExt>[numDrivers];
+                    FIFO_Hist = new ConcurrentQueue<DriverComm.DataExtClass>[numDrivers];
 
                     k = 0; //Init the index.
-                    foreach (DrvHConf DriverConfig in DriversHistConf)
+                    foreach (DriverComm.DVConfDAConfClass DriverConfig in DriversHistConf)
                     {
-                        if ((DriverConfig.DriverConf.ID>0) && (DriverConfig.DriverConf.ID < 100))
+                        if ((DriverConfig.DVConf.ID>0) && (DriverConfig.DVConf.ID < 100))
                         {
-                            IdtoPos[DriverConfig.DriverConf.ID] = k;
-                            FIFO_Hist[k] = new ConcurrentQueue<DriverComm.DriverFunctions.DataExt>();
+                            IdtoPos[DriverConfig.DVConf.ID] = k;
+                            FIFO_Hist[k] = new ConcurrentQueue<DriverComm.DataExtClass>();
                             k++;
                         }
-                        else { isInitialized = false; retVal = -2; }
+                        else
+                        {
+                            Status.NewStat(StatT.Bad, "Creating Queue Failed.");
+                            isInitialized = false; retVal = -2;
+                        }
+                    }
+
+                    if (k>0)
+                    {
+                        Status.NewStat(StatT.Good, "Created "+k.ToString()+" Queue for Hist." );
                     }
 
                     //Create the Background workers.
@@ -261,7 +280,7 @@ namespace DriverCommApp.Historics
         /// <summary>
         /// Add new Data Package to the FIFO.
         /// </summary>
-        public int NewPackage(DriverComm.DriverFunctions.DataExt[] DataFromDv)
+        public int NewPackage(DriverComm.DataExtClass[] DataFromDv)
         {
             int retVal,k;
 
@@ -269,16 +288,36 @@ namespace DriverCommApp.Historics
 
             if (isInitialized)
             {
-                foreach (DriverComm.DriverFunctions.DataExt DataAreaDV in DataFromDv)
+                foreach (DriverComm.DataExtClass DataAreaDV in DataFromDv)
                 {
                     if (DataAreaDV.AreaConf.ToHistorics)
                     {
                         if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
                         {
                             k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
-                            FIFO_Hist[k].Enqueue(DataAreaDV);
+                            if (k < 0)
+                            {
+                                if (FIFO_Hist[k].Count > MaxQueueElements)
+                                {
+                                    Status.NewStat(StatT.Warning, "Queue is Full, a Package is dropped.");
+                                }
+                                else
+                                {
+                                    FIFO_Hist[k].Enqueue(DataAreaDV);
+                                }
+                            }
+                            else
+                            {
+                                Status.NewStat(StatT.Warning, "This DV Id doesnt belows to this Historics.");
+                                retVal = -5;
+                            }
+
                         }
-                        else { retVal = -3; }
+                        else
+                        {
+                            Status.NewStat(StatT.Warning, "New Package EnQueue Failed.");
+                            retVal = -3;
+                        }
                     } // END IF Historics is enabled for this DataArea.
                 }
                 if (retVal<-10) retVal = 0; //Everything is OK
@@ -296,7 +335,11 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int CloseALL()
         {
-            
+            if (!WorkersRuning)
+            {
+                return 0;
+            }
+            return -1;
         }
 
         /// <summary>
@@ -307,31 +350,25 @@ namespace DriverCommApp.Historics
         private void Worker_DoWork(object sender,
             DoWorkEventArgs e)
         {
-            int i, msLeft;
+            int msLeft, cycleHist=500;
             DateTime initialTime, finalTime;
             long msCycle;
-            WorkerProgress ToReport;
-
-            //Get the Driver for this worker.
-            DriverGeneric thisDriver = (DriverGeneric) e.Argument;
 
             // Get the BackgroundWorker that raised this event.
             BackgroundWorker worker = sender as BackgroundWorker;
 
             //Name the Worker
             if (Thread.CurrentThread.Name == null)
-                Thread.CurrentThread.Name = "CycleDriver" + thisDriver.thisDriverConf.ID.ToString("00");
+                Thread.CurrentThread.Name = "CycleHist";
 
             //Initialize variables
-            ToReport = new WorkerProgress();
-            msCycle = 0; i = 0;
+            msCycle = 0;
 
             while (!e.Cancel)
             {
                 //Get time
                 initialTime = DateTime.Now;
 
-                if (i > 99) { i = 0; } else { i++; }
                 if (worker.CancellationPending)
                 {
                     e.Cancel = true;
@@ -339,10 +376,8 @@ namespace DriverCommApp.Historics
                 else
                 {
 
-
                     //Do Operations.
-
-                    if (!DoCycle(thisDriver, out ToReport.DVstat, out ToReport.DBstat))
+                    if (!DoCycle())
                     {
                         //Fatal Error, Cancel the Worker
                         e.Cancel = true;
@@ -351,25 +386,20 @@ namespace DriverCommApp.Historics
                     //Sleep for the rest of the time cicle.
                     finalTime = DateTime.Now;
                     msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
-                    ToReport.LoopTime = msCycle;
-                    ToReport.DriverID = thisDriver.thisDriverConf.ID;
 
-                    if (msCycle < thisDriver.thisDriverConf.CycleTime)
+
+                    if (msCycle < cycleHist)
                     {
-                        msLeft = (int)(thisDriver.thisDriverConf.CycleTime - msCycle);
+                        msLeft = (int)(cycleHist - msCycle);
                         Thread.Sleep(msLeft);
-                        ToReport.StatMsg = "";
                     }
                     else
                     {
                         //Cicle is taking too much time!!!
                         //Only report if its 15% higger than limit.
-                        if (msCycle > (thisDriver.thisDriverConf.CycleTime * 1.15))
-                            ToReport.StatMsg = "Main Cycle taking too long, " + msCycle.ToString() +
-                                " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms";
-                    }
+                        if (msCycle > (cycleHist * 1.15))
 
-                    worker.ReportProgress(i, ToReport);
+                    }
 
                 }
             } //While not Cancelation
@@ -431,102 +461,151 @@ namespace DriverCommApp.Historics
                 StatDVMain.ID_Time[StatReport.DriverID] = StatReport.LoopTime;
         }
 
+        /// <summary>
+        /// Check the Queue, and Sent data to the Database.
+        ///  </summary>
+        private int DoCycle()
+        {
+            int i, Qelements, retVal;
+            DriverComm.DataExtClass QDataExt;
+            DriverComm.DataExtClass[] ArrayDataExt;
+
+            //Init
+            retVal = 0;
+
+            try { 
+            if (isInitialized)
+            foreach (ConcurrentQueue<DriverComm.DataExtClass> Queue in FIFO_Hist)
+            {
+                    if (!Queue.IsEmpty)
+                    {
+                        Qelements = Queue.Count;
+                        
+
+                        if (Qelements > ((int)(MaxQueueElements / 2)))
+                        {
+                            Qelements = (int)(MaxQueueElements / 2);
+                            retVal = 1; //A Queue is getting full
+                        }
+
+                        ArrayDataExt = new DriverComm.DataExtClass[Qelements];
+
+                        for (i = 0; i < Qelements; i++)
+                        {
+                            if(Queue.TryDequeue(out QDataExt))
+                            {
+                                ArrayDataExt[i] = QDataExt;
+                            } else
+                            {
+                                ArrayDataExt[i] = null;
+                            }
+                        } //END For Qelements.
+
+                        WriteDB(ArrayDataExt);
+
+                    } //END If Queue is Empty.
+                    
+            } //END Foreach Queue FIFO
+
+            } catch (Exception e)
+            {
+                Status.NewStat(StatT.Bad, e.Message);
+                return -100;
+            }
+
+        }// END Fucntion DoCycle
 
         /// <summary>
-        /// Write to database.
-        /// </summary>
-        private int Write(DriverComm.DriverFunctions.DataExt[] DataExt, int numDA)
+        /// Write data into the Historics.
+        /// <param name="DataExt">Data readed from devices to be writen into the database.</param> </summary>
+        private int WriteDB(DriverComm.DataExtClass[] DataExt)
         {
             int retVal;
             retVal = -1;
 
-            GeneralStat.StatAllOK = false; GeneralStat.statusMSG = "";
-
             if (!isInitialized) return -2;
 
-            if (HistConf.SrvEn == HSrvSelection.MasterOnly)
+            if (HistConf.SrvEn == HistConfClass.SrvSelection.MasterOnly)
             {
-                //Init the Master Obj
-                MasterWStat.InitWrite(DataExt, numDA);
-                WriteMaster();
+                if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    if (WriteMySQL(MasterMySQL, DataExt)) retVal = 0;
 
-                if (MasterWStat.StatAllOK)
-                { retVal = 0; GeneralStat.StatAllOK = true; }
-                else
-                { GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG; }
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
             }
-            else if (HistConf.SrvEn == HSrvSelection.BackupOnly)
+            else if (HistConf.SrvEn == HistConfClass.SrvSelection.BackupOnly)
             {
-                //Init the Backup Obj
-                BackupWStat.InitWrite(DataExt, numDA);
-                WriteBackup();
+                if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
+                    if (WriteMySQL(BackupMySQL, DataExt)) retVal = 0;
 
-                if (BackupWStat.StatAllOK)
-                { retVal = 0; GeneralStat.StatAllOK = true; }
-                else
-                { GeneralStat.statusMSG = "BackupHist: " + BackupWStat.statusMSG; }
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
             }
-            else if (HistConf.SrvEn == HSrvSelection.BothSrv)
+            else if (HistConf.SrvEn == HistConfClass.SrvSelection.BothSrv)
             {
-                //Init the Backup Obj
-                BackupWStat.InitWrite(DataExt, numDA);
+                Task<bool> taskMaster = null, taskBackup = null;
 
-                //Create the threads
-                Thread MasterServer = new Thread(new ThreadStart(WriteMaster));
-                Thread BackupServer = new Thread(new ThreadStart(WriteBackup));
+                //Create the Tasks
+                //https://msdn.microsoft.com/en-us/library/dd537609(v=vs.110).aspx
 
-                //Start the Threads
-                MasterServer.Start();
-                BackupServer.Start();
+                if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskMaster = new Task<bool>(() => WriteMySQL(MasterMySQL, DataExt));
 
-                //Now Wait for them
-                MasterServer.Join();
-                BackupServer.Join();
+                if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskBackup = new Task<bool>(() => WriteMySQL(BackupMySQL, DataExt));
 
-                //Only one ok return 1
-                if ((MasterWStat.StatAllOK) || (BackupWStat.StatAllOK)) retVal = 1;
+                if ((taskMaster != null) && (taskBackup != null))
+                {
+                    //Start the Tasks
+                    taskMaster.Start();
+                    taskBackup.Start();
 
-                //All ok return 0
-                if ((MasterWStat.StatAllOK) && (BackupWStat.StatAllOK))
-                { retVal = 0; GeneralStat.StatAllOK = true; }
+                    //Now Wait for them
+                    taskMaster.Wait();
+                    taskBackup.Wait();
+
+                    //Check Result of Master
+                    if (!taskMaster.Result)
+                        Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
+
+                    //Check Result of Backup
+                    if (!taskBackup.Result)
+                        Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
+
+                    //Only one ok return 1
+                    if ((taskMaster.Result) || (taskBackup.Result)) retVal = 1;
+
+                    //All ok return 0
+                    if ((taskMaster.Result) && (taskBackup.Result)) retVal = 0;
+                }
                 else
                 {
-                    GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG +
-                          Environment.NewLine + "BackupHist: " + BackupWStat.statusMSG;
+                    Status.NewStat(StatT.Bad, "Wrong Config Params.");
+                    retVal = -10;
+                }
+            }//END Both Srv Selection
+
+            return retVal;
+        } //END Write Function
+
+        /// <summary>
+        /// Write data into the Historics (MySQL). </summary>
+        private bool WriteMySQL(HistMySQL.Hist_MySQL HObject, DriverComm.DataExtClass[] DataWrite)
+        {
+            bool retVal = false;
+
+            if (Thread.CurrentThread.Name == null)
+                Thread.CurrentThread.Name = "DBWrite";
+
+            if (HObject.isInitialized)
+            {
+                if (DataWrite != null)
+                {
+                    retVal = HObject.Write(DataWrite);
+                    Status.AddSummary(HObject.Status.GetSummary());
                 }
             }
 
             return retVal;
-
-        } //END Function Write
-
-        /// <summary>
-        /// Write data into the database (MasterServer). </summary>
-        private void WriteMaster()
-        {
-            if (Thread.CurrentThread.Name == null)
-                Thread.CurrentThread.Name = "HistMaster";
-
-            if (HistConf.MasterServer.Type == DBConfig.DBServerType.MySQL)
-            {
-                MasterWStat.StatAllOK = MasterMySQL.Write(MasterWStat.DataWrite);
-                MasterWStat.statusMSG = MasterMySQL.status;
-            }
-        } //END WriteMaster Function
-
-        /// <summary>
-        /// Write data into the database (BackupServer). </summary>
-        private void WriteBackup()
-        {
-            if (Thread.CurrentThread.Name == null)
-                Thread.CurrentThread.Name = "HistBackup";
-
-            if (HistConf.BackupServer.Type == DBConfig.DBServerType.MySQL)
-            {
-                BackupWStat.StatAllOK = BackupMySQL.Write(BackupWStat.DataWrite);
-                BackupWStat.statusMSG = BackupMySQL.status;
-            }
-        } // END WriteBackup Function
+        } //END WriteMySQL Function
 
         /// <summary>
         /// Clean database.

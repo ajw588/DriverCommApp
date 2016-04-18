@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 using System.Threading;
 
 //This APP Namespace
 using DriverCommApp.Conf.DB;
 using static DriverCommApp.Database.DB_Functions;
 using StatT = DriverCommApp.Stat.StatReport.StatT;
+using DatType = DriverCommApp.Conf.DV.DriverConfig.DatType;
+
 
 namespace DriverCommApp.Database
 {
@@ -23,7 +25,7 @@ namespace DriverCommApp.Database
 
         /// <summary>
         /// Drivers Complete Configuration.</summary>
-        List<DriverComm.DVConfAreaConfClass> DriversConf;
+        List<DriverComm.DVConfDAConfClass> DriversConf;
 
         /// <summary>
         /// Status Report for DB.</summary>
@@ -56,7 +58,7 @@ namespace DriverCommApp.Database
             isInitialized = false;
 
             //Create the list of drivers.
-            DriversConf = new List<DriverComm.DVConfAreaConfClass>(1);
+            DriversConf = new List<DriverComm.DVConfDAConfClass>(1);
 
             //Master Server Configuration
             Master.URL = DBConfigFile.MainServer.URL;
@@ -82,7 +84,7 @@ namespace DriverCommApp.Database
             DatabaseConf = new DBConfClass(Master, Backup);
 
             //The Status Object
-            Status = new Stat.StatReport((int) Stat.StatReport.IDdef.DBall, FileLog: true);
+            Status = new Stat.StatReport((int)Stat.StatReport.IDdef.DBall, FileLog: true);
 
         } //END Class Constructor
 
@@ -90,17 +92,17 @@ namespace DriverCommApp.Database
         /// Add a driver to be managed by this Database.
         /// <param name="DriverConf">Configuration Object for driver config.</param> 
         /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
-        public int addDriver(DriverComm.DVConfClass DriverConf, DriverComm.AreaDataConfClass[] DAreaConf)
+        public int addDriver(DriverComm.DVConfClass DriverConf, DriverComm.DAConfClass[] DAreaConf)
         {
             int retVal;
-            DriverComm.DVConfAreaConfClass NewDriver;
+            DriverComm.DVConfDAConfClass NewDriver;
 
             retVal = -1;
 
             if ((DriverConf != null) && (DAreaConf != null))
                 if (DAreaConf.Length > 0)
                 {
-                    NewDriver = new DriverComm.DVConfAreaConfClass(DriverConf, DAreaConf);
+                    NewDriver = new DriverComm.DVConfDAConfClass(DriverConf, DAreaConf);
 
                     DriversConf.Add(NewDriver);
 
@@ -113,7 +115,7 @@ namespace DriverCommApp.Database
                     }
                     else
                     {
-                        Status.NewStat(StatT.Good, "DV Added: "+ NewDriver.DVConf.ID.ToString("00"));
+                        Status.NewStat(StatT.Good, "DV Added: " + NewDriver.DVConf.ID.ToString("00"));
                         retVal = 0;
                     }
 
@@ -204,34 +206,59 @@ namespace DriverCommApp.Database
                 if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                     if (WriteMySQL(MasterMySQL, DataExt)) retVal = 0;
 
-                if (retVal!=0) Status.NewStat(StatT.Bad, "Master Srv Write Failed.");
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
             }
             else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BackupOnly)
             {
                 if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                     if (WriteMySQL(BackupMySQL, DataExt)) retVal = 0;
 
-                if (retVal != 0) Status.NewStat(StatT.Bad, "Backup Srv Write Failed.");
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
             }
             else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BothSrv)
             {
+                Task<bool> taskMaster = null, taskBackup = null;
 
                 //Create the Tasks
                 //https://msdn.microsoft.com/en-us/library/dd537609(v=vs.110).aspx
 
+                if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskMaster = new Task<bool>(() => WriteMySQL(MasterMySQL, DataExt));
+
+                if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskBackup = new Task<bool>(() => WriteMySQL(BackupMySQL, DataExt));
 
 
-                //Start the Tasks
+                if ((taskMaster != null) && (taskBackup != null))
+                {
+                    //Start the Tasks
+                    taskMaster.Start();
+                    taskBackup.Start();
 
-                //Now Wait for them
+                    //Now Wait for them
+                    taskMaster.Wait();
+                    taskBackup.Wait();
 
+                    //Check Result of Master
+                    if (!taskMaster.Result)
+                        Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
 
-                //Only one ok return 1
-                if ((MasterWStat.StatAllOK) || (BackupWStat.StatAllOK)) retVal = 1;
+                    //Check Result of Backup
+                    if (!taskBackup.Result)
+                        Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
 
-                //All ok return 0
-                if ((MasterWStat.StatAllOK) && (BackupWStat.StatAllOK)) retVal = 0;
-            }
+                    //Only one ok return 1
+                    if ((taskMaster.Result) || (taskBackup.Result)) retVal = 1;
+
+                    //All ok return 0
+                    if ((taskMaster.Result) && (taskBackup.Result)) retVal = 0;
+                }
+                else
+                {
+                    Status.NewStat(StatT.Bad, "Wrong Config Params.");
+                    retVal = -10;
+                }
+            }//END Both Srv Selection
 
             return retVal;
         } //END Write Function
@@ -249,7 +276,7 @@ namespace DriverCommApp.Database
             {
                 if (DataWrite != null)
                 {
-                    retVal=DBObject.Write(DataWrite);
+                    retVal = DBObject.Write(DataWrite);
                     Status.AddSummary(DBObject.Status.GetSummary());
                 }
             }
@@ -260,15 +287,15 @@ namespace DriverCommApp.Database
 
         /// <summary>
         /// Read data from the database.
-        /// <param name="DataExt">Data readed from the database to be writen into the devices.</param> 
-        /// <param name="numDA">Number of Data areas in the object.</param> </summary>
-        public int ReadDB(ref DriverComm.DataExtClass[] DataExt)
+        /// <param name="DataExt">Data readed from the database to be writen into the devices.</param>  </summary>
+        public int ReadDB(DriverComm.DataExtClass[] DataExt)
         {
             int retVal;
             retVal = -1;
 
             if (!isInitialized) return -2;
 
+            //Read first reads from master if Enabled. 
             if (DatabaseConf.MasterSrv.Enable)
             {
                 if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
@@ -276,33 +303,41 @@ namespace DriverCommApp.Database
                     if (MasterMySQL.Read(DataExt))
                     {
                         retVal = 0;
-                        MasterRStat.StatAllOK = true;
+                        Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
                     }
                     else
                     {
-                        MasterRStat.StatAllOK = false;
-                        MasterRStat.statusMSG = MasterMySQL.status;
+
                     }
                 }
-            }
-            else if ((DatabaseConf.BackupSrv.Enable) && (retVal < 0))
+            } //END IF Master is Enabled
+
+            //Only in case reading from Master fails, then it reads from backup.
+            if ((DatabaseConf.BackupSrv.Enable) && (retVal < 0))
             {
-                //Read always reads from master. 
-                //Only in case reading from master fails, then it reads from backup.
-                if (BackupMySQL.Read(ref DatatoRead))
+                
+                
+                if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                 {
-                    retVal = 1;
-                    BackupRStat.StatAllOK = true;
+                    if (BackupMySQL.Read(DataExt))
+                    {
+                        retVal = 0;
+                        Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
+                    }
+                    else
+                    {
+
+                    }
                 }
-                else
-                {
-                    BackupRStat.StatAllOK = false;
-                    BackupRStat.statusMSG = MasterMySQL.status;
-                }
-            }
+            } //IF needs to read from Backup
 
             return retVal;
         } //END Read Function
+
+        /*
+         //*****************************************************
+         // Deprecather Method, Now just access the Status Object.
+         //*******************************************************
 
         /// <summary>
         /// Get Status of the Database conectivity.
@@ -338,7 +373,7 @@ namespace DriverCommApp.Database
             }
 
             return retVal;
-        }
+        } */
 
         /// <summary>
         /// Count the number and type of vars in the Var Tree.
@@ -355,8 +390,8 @@ namespace DriverCommApp.Database
 
             NumVars.nDrivers = DriversConf.Count;
 
-            foreach (DrvConf DvDevice in DriversConf)
-                foreach (DriverComm.DriverFunctions.AreaData DeviceDA in DvDevice.AreaConf)
+            foreach (DriverComm.DVConfDAConfClass DvDevice in DriversConf)
+                foreach (DriverComm.DAConfClass DeviceDA in DvDevice.DAConf)
                 {
 
                     NumVars.nDA++; //Count the Data Areas (total).
@@ -367,25 +402,25 @@ namespace DriverCommApp.Database
 
                         switch (DeviceDA.dataType)
                         {
-                            case DriverConfig.DatType.Bool:
+                            case DatType.Bool:
                                 NumVars.nBool += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.Byte:
+                            case DatType.Byte:
                                 NumVars.nByte += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.Word:
+                            case DatType.Word:
                                 NumVars.nWord += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.DWord:
+                            case DatType.DWord:
                                 NumVars.nDWord += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.sDWord:
+                            case DatType.sDWord:
                                 NumVars.nsDWord += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.Real:
+                            case DatType.Real:
                                 NumVars.nReal += DeviceDA.Amount;
                                 break;
-                            case DriverConfig.DatType.String:
+                            case DatType.String:
                                 NumVars.nString += DeviceDA.Amount;
                                 break;
                         }

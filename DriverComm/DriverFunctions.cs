@@ -100,7 +100,7 @@ namespace DriverCommApp.DriverComm
 
     /// <summary>
     /// Definition for the data areas configuration.</summary>
-    public class AreaDataConfClass
+    public class DAConfClass
     {
         /// <summary> Data Area Block ID</summary>
         public readonly int ID;
@@ -123,7 +123,7 @@ namespace DriverCommApp.DriverComm
 
         /// <summary>
         /// Fast config, and integer to TypeData conversion.</summary>
-        public AreaDataConfClass(int idDA, int idDv, bool En, bool isWrite, bool Tohist, int TypeData, int DBnum, string StarAdd, int NumOfVars)
+        public DAConfClass(int idDA, int idDv, bool En, bool isWrite, bool Tohist, int TypeData, int DBnum, string StarAdd, int NumOfVars)
         {
             ID = idDA;
             ID_Driver = idDv;
@@ -166,7 +166,7 @@ namespace DriverCommApp.DriverComm
 
         /// <summary>
         /// Fast config, and No TypeData conversion.</summary>
-        public AreaDataConfClass(int idDA, int idDv, bool En, bool isWrite, bool Tohist, DriverConfig.DatType TypeData, int DBnum, string StarAdd, int NumOfVars)
+        public DAConfClass(int idDA, int idDv, bool En, bool isWrite, bool Tohist, DriverConfig.DatType TypeData, int DBnum, string StarAdd, int NumOfVars)
         {
             ID = idDA;
             ID_Driver = idDv;
@@ -211,7 +211,7 @@ namespace DriverCommApp.DriverComm
         /// <summary> Variable Symbolic Names</summary>
         public string[] VarNames;
         /// <summary> Data Area Block Configuration</summary>
-        public AreaDataConfClass AreaConf;
+        public DAConfClass AreaConf;
         /// <summary> Flag for the Data Area Block First Initialization</summary>
         public bool FirstInit;
 
@@ -265,16 +265,16 @@ namespace DriverCommApp.DriverComm
 
     /// <summary>
     /// Driver Complete Configuration Type Def.</summary>
-    public class DVConfAreaConfClass
+    public class DVConfDAConfClass
     {
         /// <summary> Driver Configuration</summary>
         public readonly DVConfClass DVConf;
 
         /// <summary> Data Area Blocks Configuration Array</summary>
-        public readonly AreaDataConfClass[] DAConf;
+        public readonly DAConfClass[] DAConf;
 
         /// <summary> Class Cttr.</summary>
-        public DVConfAreaConfClass(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf)
+        public DVConfDAConfClass(DVConfClass DriverConf, DAConfClass[] DataAreaConf)
         {
             DVConf= DriverConf;
             DAConf=DataAreaConf;

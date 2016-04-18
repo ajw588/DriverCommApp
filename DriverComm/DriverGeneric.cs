@@ -14,7 +14,7 @@ namespace DriverCommApp.DriverComm
     {
         /// <summary>
         /// Configuration for the data areas of this driver.</summary>
-        public AreaDataConfClass[] thisAreaConf;
+        public DAConfClass[] thisAreaConf;
 
         /// <summary>
         /// Configuration for the data areas of this driver.</summary>
@@ -131,7 +131,7 @@ namespace DriverCommApp.DriverComm
 
                         if (DACount > 0)
                         {
-                            thisAreaConf = new AreaDataConfClass[DACount];
+                            thisAreaConf = new DAConfClass[DACount];
                             ExtData = new DataExtClass[DACount];
                             thisDriverConf.NDataAreas = DACount;
                             i = 0;
@@ -141,7 +141,7 @@ namespace DriverCommApp.DriverComm
                                 {
                                     if (DataAreaElement.Enable)
                                     {
-                                        thisAreaConf[i] = new AreaDataConfClass(DataAreaElement.ID, DataAreaElement.ID_Driver,
+                                        thisAreaConf[i] = new DAConfClass(DataAreaElement.ID, DataAreaElement.ID_Driver,
                                         DataAreaElement.Enable, DataAreaElement.Write, DataAreaElement.ToHist,
                                         DataAreaElement.DataType, DataAreaElement.DB_Number, DataAreaElement.StartAddr,
                                         DataAreaElement.AmountVar);
@@ -213,7 +213,7 @@ namespace DriverCommApp.DriverComm
                         //Special case for the XWave Driver.
                         DACount = 4;
                         thisDriverConf.NDataAreas = DACount;
-                        thisAreaConf = new AreaDataConfClass[DACount];
+                        thisAreaConf = new DAConfClass[DACount];
                         ExtData = new DataExtClass[DACount];
 
                         //Reading and Writing Flags (The Xwave only reads data in this edition)
@@ -234,7 +234,7 @@ namespace DriverCommApp.DriverComm
                             ExtData[0] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nBool > 0)
                             {
-                                thisAreaConf[0] = new AreaDataConfClass(1, thisDriverConf.ID, true, false, true,
+                                thisAreaConf[0] = new DAConfClass(1, thisDriverConf.ID, true, false, true,
                                     DriverConfig.DatType.Bool, 0, "0", ObjDriverXWave.NumVars.nBool);
                                 ExtData[0].Data.dBoolean = new bool[ObjDriverXWave.NumVars.nBool];
                                 ExtData[0].VarNames = new string[ObjDriverXWave.NumVars.nBool];
@@ -242,7 +242,7 @@ namespace DriverCommApp.DriverComm
                             }
                             else
                             {
-                                thisAreaConf[0] = new AreaDataConfClass(1, thisDriverConf.ID, false, false, false,
+                                thisAreaConf[0] = new DAConfClass(1, thisDriverConf.ID, false, false, false,
                                     DriverConfig.DatType.Bool, 0, "0", ObjDriverXWave.NumVars.nBool);
                             }
                             ExtData[0].AreaConf = thisAreaConf[0];
@@ -251,7 +251,7 @@ namespace DriverCommApp.DriverComm
                             ExtData[1] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nDWord > 0)
                             {
-                                thisAreaConf[1] = new AreaDataConfClass(2, thisDriverConf.ID, true, false, true,
+                                thisAreaConf[1] = new DAConfClass(2, thisDriverConf.ID, true, false, true,
                                     DriverConfig.DatType.DWord, 0, "0", ObjDriverXWave.NumVars.nDWord);
                                 ExtData[1].Data.dDWord = new UInt32[ObjDriverXWave.NumVars.nDWord];
                                 ExtData[1].VarNames = new string[ObjDriverXWave.NumVars.nDWord];
@@ -259,7 +259,7 @@ namespace DriverCommApp.DriverComm
                             }
                             else
                             {
-                                thisAreaConf[1] = new AreaDataConfClass(2, thisDriverConf.ID, false, false, false,
+                                thisAreaConf[1] = new DAConfClass(2, thisDriverConf.ID, false, false, false,
                                     DriverConfig.DatType.DWord, 0, "0", ObjDriverXWave.NumVars.nDWord);
                             }
                             ExtData[1].AreaConf = thisAreaConf[1];
@@ -268,7 +268,7 @@ namespace DriverCommApp.DriverComm
                             ExtData[2] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nsDWord > 0)
                             {
-                                thisAreaConf[2] = new AreaDataConfClass(3, thisDriverConf.ID, true, false, true,
+                                thisAreaConf[2] = new DAConfClass(3, thisDriverConf.ID, true, false, true,
                                     DriverConfig.DatType.sDWord, 0, "0", ObjDriverXWave.NumVars.nsDWord);
                                 ExtData[2].Data.dsDWord = new Int32[ObjDriverXWave.NumVars.nsDWord];
                                 ExtData[2].VarNames = new string[ObjDriverXWave.NumVars.nsDWord];
@@ -276,7 +276,7 @@ namespace DriverCommApp.DriverComm
                             }
                             else
                             {
-                                thisAreaConf[2] = new AreaDataConfClass(3, thisDriverConf.ID, false, false, false,
+                                thisAreaConf[2] = new DAConfClass(3, thisDriverConf.ID, false, false, false,
                                     DriverConfig.DatType.sDWord, 0, "0", ObjDriverXWave.NumVars.nsDWord);
                             }
                             ExtData[2].AreaConf = thisAreaConf[2];
@@ -285,7 +285,7 @@ namespace DriverCommApp.DriverComm
                             ExtData[3] = new DataExtClass();
                             if (ObjDriverXWave.NumVars.nReal > 0)
                             {
-                                thisAreaConf[3] = new AreaDataConfClass(4, thisDriverConf.ID, true, false, true,
+                                thisAreaConf[3] = new DAConfClass(4, thisDriverConf.ID, true, false, true,
                                     DriverConfig.DatType.Real, 0, "0", ObjDriverXWave.NumVars.nReal);
                                 ExtData[3].Data.dReal = new float[ObjDriverXWave.NumVars.nReal];
                                 ExtData[3].VarNames = new string[ObjDriverXWave.NumVars.nReal];
@@ -293,7 +293,7 @@ namespace DriverCommApp.DriverComm
                             }
                             else
                             {
-                                thisAreaConf[3] = new AreaDataConfClass(4, thisDriverConf.ID, false, false, false,
+                                thisAreaConf[3] = new DAConfClass(4, thisDriverConf.ID, false, false, false,
                                     DriverConfig.DatType.Real, 0, "0", ObjDriverXWave.NumVars.nReal);
                             }
                             ExtData[3].AreaConf = thisAreaConf[3];

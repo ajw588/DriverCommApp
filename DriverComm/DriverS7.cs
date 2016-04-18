@@ -38,7 +38,7 @@ namespace DriverCommApp.DriverComm.Siemens7
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        AreaDataConfClass[] MasterDataAreaConf;
+        DAConfClass[] MasterDataAreaConf;
 
         /// <summary>
         /// Driver Status.</summary>
@@ -57,7 +57,7 @@ namespace DriverCommApp.DriverComm.Siemens7
         /// <param name="DriverConf">Driver Configuration Object</param>
         /// <param name="DataAreaConf">Data Area Block Configuration Object Array</param>
         /// <param name="StatObject">Object for Status Reporting</param></summary>
-        public DriverS7(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf, Stat.StatReport StatObject)
+        public DriverS7(DVConfClass DriverConf, DAConfClass[] DataAreaConf, Stat.StatReport StatObject)
         {
             MasterDriverConf = DriverConf;
             MasterDataAreaConf = DataAreaConf;
@@ -73,7 +73,7 @@ namespace DriverCommApp.DriverComm.Siemens7
         public void Initialize()
         {
             int i, datSize, SAddress, tAmount;
-            AreaDataConfClass thisArea;
+            DAConfClass thisArea;
 
             //Reset the Status Buffer
             Status.ResetStat();

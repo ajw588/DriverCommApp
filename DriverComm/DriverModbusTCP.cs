@@ -36,7 +36,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
         /// <summary>
         /// Master Data Area Conf.</summary>
-        AreaDataConfClass[] MasterDataAreaConf;
+        DAConfClass[] MasterDataAreaConf;
 
         /// <summary>
         /// Flag for Driver Initialization.</summary>
@@ -59,7 +59,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         /// <param name="DriverConf">Driver Configuration Object</param>
         /// <param name="DataAreaConf">Data Area Block Configuration Object Array</param>
         /// <param name="StatObject">Object for Status Reporting</param></summary>
-        public DriverModbusTCP(DVConfClass DriverConf, AreaDataConfClass[] DataAreaConf, Stat.StatReport StatObject)
+        public DriverModbusTCP(DVConfClass DriverConf, DAConfClass[] DataAreaConf, Stat.StatReport StatObject)
         {
             MasterDriverConf = DriverConf;
             MasterDataAreaConf = DataAreaConf;
@@ -85,7 +85,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
             if ((!isInitialized) && (MasterDriverConf.Enable))
             {
                 int i, SAddress;
-                AreaDataConfClass thisArea;
+                DAConfClass thisArea;
 
                 try
                 {
@@ -190,7 +190,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         {
             int i, j, jj, SAddress, retVar;
             uint highWord, lowWord;
-            AreaDataConfClass thisArea;
+            DAConfClass thisArea;
             retVar = -1;
 
             //Reset the Status Buffer
@@ -328,7 +328,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
         {
             int i, j, jj, SAddress, retVar;
             uint intFloat;
-            AreaDataConfClass thisArea;
+            DAConfClass thisArea;
 
             retVar = -1;
 
