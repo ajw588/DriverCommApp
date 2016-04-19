@@ -484,40 +484,34 @@ namespace DriverCommApp.DriverComm
         }
 
         /// <summary>
-        /// Kill, and free the memory of the drivers.</summary>
-        public void Kill()
+        /// Close, and free the memory of the drivers.</summary>
+        public void CloseAll()
         {
+            this.Disconnect();
+
             if (!isConnected)
             {
-                switch (thisDriverConf.Type)
-                {
-                    case DriverConfig.DriverType.XWave:
-                        //ObjDriverXWave=null;
-                        break;
-                    case DriverConfig.DriverType.S7_TCP:
-                        ObjDriverS7 = null;
-                        break;
-                    case DriverConfig.DriverType.ModbusTCP:
-                        ObjDriverModTCP = null;
-                        break;
-                    default:
-                        Status.NewStat(StatType.Warning, "Wrong Driver Type, Check Config.");
-                        break;
-                }
                 isInitialized = false;
             }
+
+            //Flush the logs
+            Status.FlushLog();
         }
+
         /// <summary>
         /// Class Destructor.</summary>
         ~DriverGeneric()
         {
             //Delete all the data pointers, and free the memory.
             thisAreaConf = null;
-            //thisDriverConf = null;
+            thisDriverConf = null;
             ExtData = null;
-            //ObjDriverXWave = null;
+
             ObjDriverS7 = null;
             ObjDriverModTCP = null;
+            ObjDriverXWave = null;
+
+            Status = null;
         }
 
     } // Class DriverGeneric

@@ -111,12 +111,12 @@ namespace DriverCommApp.Historics
         /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
         public int addDriver(DriverComm.DVConfClass DriverConf, DriverComm.DAConfClass[] DAreaConf)
         {
-            int retVal=-1;
+            int retVal = -1;
             DriverComm.DVConfDAConfClass NewDriver;
 
             if ((DriverConf != null) && (DAreaConf != null))
                 if (DAreaConf.Length > 0)
-            {
+                {
                     NewDriver = new DriverComm.DVConfDAConfClass(DriverConf, DAreaConf);
 
                     DriversHistConf.Add(NewDriver);
@@ -145,7 +145,7 @@ namespace DriverCommApp.Historics
         public int Initialize(bool InitialSet)
         {
             int k, retVal, numDrivers;
-            
+
             retVal = -1;
 
             numDrivers = DriversHistConf.Count;
@@ -162,7 +162,7 @@ namespace DriverCommApp.Historics
                     //Build the Driver and Initialize for MySQL
                     if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                     {
-                        MasterMySQL = new HistMySQL.Hist_MySQL(HistConf.MasterSrv);
+                        MasterMySQL = new HistMySQL.Hist_MySQL(HistConf.MasterSrv, true);
                         MasterMySQL.Initialize(InitialSet, DriversHistConf);
 
                         if (MasterMySQL.isInitialized)
@@ -184,7 +184,7 @@ namespace DriverCommApp.Historics
                     //Build the Driver and Initialize for MySQL.
                     if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                     {
-                        BackupMySQL = new HistMySQL.Hist_MySQL(HistConf.BackupSrv);
+                        BackupMySQL = new HistMySQL.Hist_MySQL(HistConf.BackupSrv, false);
                         BackupMySQL.Initialize(InitialSet, DriversHistConf);
 
                         if (BackupMySQL.isInitialized)
@@ -209,7 +209,7 @@ namespace DriverCommApp.Historics
                     k = 0; //Init the index.
                     foreach (DriverComm.DVConfDAConfClass DriverConfig in DriversHistConf)
                     {
-                        if ((DriverConfig.DVConf.ID>0) && (DriverConfig.DVConf.ID < 100))
+                        if ((DriverConfig.DVConf.ID > 0) && (DriverConfig.DVConf.ID < 100))
                         {
                             IdtoPos[DriverConfig.DVConf.ID] = k;
                             FIFO_Hist[k] = new ConcurrentQueue<DriverComm.DataExtClass>();
@@ -222,9 +222,9 @@ namespace DriverCommApp.Historics
                         }
                     }
 
-                    if (k>0)
+                    if (k > 0)
                     {
-                        Status.NewStat(StatT.Good, "Created "+k.ToString()+" Queue for Hist." );
+                        Status.NewStat(StatT.Good, "Created " + k.ToString() + " Queue for Hist.");
                     }
 
                     //Create the Background workers.
@@ -234,14 +234,13 @@ namespace DriverCommApp.Historics
                     Worker.DoWork += new DoWorkEventHandler(Worker_DoWork);
                     Worker.RunWorkerCompleted +=
                         new RunWorkerCompletedEventHandler(Worker_RunWorkerCompleted);
-                    Worker.ProgressChanged +=
-                        new ProgressChangedEventHandler(Worker_ProgressChanged);
+
+                    //Worker.ProgressChanged +=  new ProgressChangedEventHandler(Worker_ProgressChanged);
 
                     //Properties
-                    Worker.WorkerReportsProgress = true;
+                    Worker.WorkerReportsProgress = false;
                     Worker.WorkerSupportsCancellation = true;
                 }
-
             }
 
             return retVal;
@@ -252,6 +251,7 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int StartWork()
         {
+            if (isInitialized)
             if (!WorkersRuning)
             {
                 Worker.RunWorkerAsync();
@@ -261,7 +261,7 @@ namespace DriverCommApp.Historics
 
             //Already something running, don't ask again.
             return -1;
-               
+
         }
 
         /// <summary>
@@ -274,7 +274,7 @@ namespace DriverCommApp.Historics
                 Worker.CancelAsync();
                 return 0;
             }
-            return -1;   
+            return -1;
         }
 
         /// <summary>
@@ -282,50 +282,53 @@ namespace DriverCommApp.Historics
         /// </summary>
         public int NewPackage(DriverComm.DataExtClass[] DataFromDv)
         {
-            int retVal,k;
+            int retVal, k;
 
-            retVal = -1000;
+            retVal = -100;
 
-            if (isInitialized)
+            if ((isInitialized) && (DataFromDv != null))
             {
                 foreach (DriverComm.DataExtClass DataAreaDV in DataFromDv)
                 {
-                    if (DataAreaDV.AreaConf.ToHistorics)
+                    if (DataAreaDV != null)
                     {
-                        if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
+                        if ((DataAreaDV.AreaConf.ToHistorics) && (DataAreaDV.AreaConf.Enable))
                         {
-                            k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
-                            if (k < 0)
+                            if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
                             {
-                                if (FIFO_Hist[k].Count > MaxQueueElements)
+                                k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
+                                if (k < 0)
                                 {
-                                    Status.NewStat(StatT.Warning, "Queue is Full, a Package is dropped.");
+                                    if (FIFO_Hist[k].Count > MaxQueueElements)
+                                    {
+                                        Status.NewStat(StatT.Warning, "Queue is Full, a Package is dropped.");
+                                    }
+                                    else
+                                    {
+                                        FIFO_Hist[k].Enqueue(DataAreaDV);
+                                    }
                                 }
                                 else
                                 {
-                                    FIFO_Hist[k].Enqueue(DataAreaDV);
+                                    Status.NewStat(StatT.Warning, "This DV Id doesnt belows to this Historics.");
+                                    retVal = -5;
                                 }
+
                             }
                             else
                             {
-                                Status.NewStat(StatT.Warning, "This DV Id doesnt belows to this Historics.");
-                                retVal = -5;
+                                Status.NewStat(StatT.Warning, "New Package EnQueue Failed.");
+                                retVal = -3;
                             }
+                        } // END IF Historics is enabled for this DataArea.
 
-                        }
-                        else
-                        {
-                            Status.NewStat(StatT.Warning, "New Package EnQueue Failed.");
-                            retVal = -3;
-                        }
-                    } // END IF Historics is enabled for this DataArea.
-                }
-                if (retVal<-10) retVal = 0; //Everything is OK
-            } else
-            {
-                //Not initialized
-                retVal = -2;
-            } //END IF isInitialized
+                    } //DataAreaDV!=null
+                    else { Status.NewStat(StatT.Bad, "Data corrupted"); } 
+
+                } //END Foreach DataArea
+
+            }//Not initialized
+            else { Status.NewStat(StatT.Bad, "Not Initialized or Data corrupted"); } //END IF isInitialized
 
             return retVal;
         }
@@ -338,7 +341,12 @@ namespace DriverCommApp.Historics
             if (!WorkersRuning)
             {
                 return 0;
+            } else
+            {
+                Status.NewStat(StatT.Warning, "Workers still running, stop before leaving");
             }
+
+            Status.FlushLog();
             return -1;
         }
 
@@ -350,7 +358,7 @@ namespace DriverCommApp.Historics
         private void Worker_DoWork(object sender,
             DoWorkEventArgs e)
         {
-            int msLeft, cycleHist=500;
+            int msLeft, cycleHist = 500;
             DateTime initialTime, finalTime;
             long msCycle;
 
@@ -377,7 +385,7 @@ namespace DriverCommApp.Historics
                 {
 
                     //Do Operations.
-                    if (!DoCycle())
+                    if (DoCycle() < -1)
                     {
                         //Fatal Error, Cancel the Worker
                         e.Cancel = true;
@@ -387,10 +395,10 @@ namespace DriverCommApp.Historics
                     finalTime = DateTime.Now;
                     msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
 
-
                     if (msCycle < cycleHist)
                     {
                         msLeft = (int)(cycleHist - msCycle);
+                        Status.NewStat(StatT.Good, msCycle);
                         Thread.Sleep(msLeft);
                     }
                     else
@@ -398,7 +406,7 @@ namespace DriverCommApp.Historics
                         //Cicle is taking too much time!!!
                         //Only report if its 15% higger than limit.
                         if (msCycle > (cycleHist * 1.15))
-
+                            Status.NewStat(StatT.Warning, "Hist cycle too long: " + msCycle.ToString() + "ms", msCycle);
                     }
 
                 }
@@ -433,6 +441,12 @@ namespace DriverCommApp.Historics
                 // succeeded.
             }
 
+            //Disconnect the Database Objects
+            if (MasterMySQL != null) MasterMySQL.Disconnect();
+            if (BackupMySQL != null) BackupMySQL.Disconnect();
+
+            //Reset Worker Flag
+            WorkersRuning = false;
 
         }
 
@@ -442,23 +456,7 @@ namespace DriverCommApp.Historics
         private void Worker_ProgressChanged(object sender,
             ProgressChangedEventArgs e)
         {
-            WorkerProgress StatReport;
 
-            //Get the report data
-            StatReport = (WorkerProgress)e.UserState;
-
-            if (StatReport.DVstat.StatInt != StatT.Undefined)
-                StatDVMain.NewStat(StatReport.DVstat.StatInt, StatReport.DVstat.StatMSG);
-
-            if (StatReport.DBstat.StatInt != StatT.Undefined)
-                StatDBMain.NewStat(StatReport.DBstat.StatInt, StatReport.DBstat.StatMSG);
-
-            if (StatReport.StatMsg.Length > 3)
-                StatDBMain.NewStat(StatT.Good, StatReport.DriverID, StatReport.StatMsg);
-
-            //Report the TimeLoop
-            if (StatReport.DriverID < StatDVMain.ID_Time.Length)
-                StatDVMain.ID_Time[StatReport.DriverID] = StatReport.LoopTime;
         }
 
         /// <summary>
@@ -466,52 +464,58 @@ namespace DriverCommApp.Historics
         ///  </summary>
         private int DoCycle()
         {
-            int i, Qelements, retVal;
+            int i, Qelements, retVal, tempVal;
             DriverComm.DataExtClass QDataExt;
             DriverComm.DataExtClass[] ArrayDataExt;
 
             //Init
             retVal = 0;
 
-            try { 
-            if (isInitialized)
-            foreach (ConcurrentQueue<DriverComm.DataExtClass> Queue in FIFO_Hist)
+            try
             {
-                    if (!Queue.IsEmpty)
+                if (isInitialized)
+                    foreach (ConcurrentQueue<DriverComm.DataExtClass> Queue in FIFO_Hist)
                     {
-                        Qelements = Queue.Count;
-                        
-
-                        if (Qelements > ((int)(MaxQueueElements / 2)))
+                        if (!Queue.IsEmpty)
                         {
-                            Qelements = (int)(MaxQueueElements / 2);
-                            retVal = 1; //A Queue is getting full
-                        }
+                            Qelements = Queue.Count;
 
-                        ArrayDataExt = new DriverComm.DataExtClass[Qelements];
-
-                        for (i = 0; i < Qelements; i++)
-                        {
-                            if(Queue.TryDequeue(out QDataExt))
+                            if (Qelements > ((int)(MaxQueueElements * 0.8)))
                             {
-                                ArrayDataExt[i] = QDataExt;
-                            } else
-                            {
-                                ArrayDataExt[i] = null;
+                                Qelements = (int)(MaxQueueElements * 0.8);
+                                retVal = 1; //A Queue is getting full
                             }
-                        } //END For Qelements.
 
-                        WriteDB(ArrayDataExt);
+                            ArrayDataExt = new DriverComm.DataExtClass[Qelements];
 
-                    } //END If Queue is Empty.
-                    
-            } //END Foreach Queue FIFO
+                            for (i = 0; i < Qelements; i++)
+                            {
+                                if (Queue.TryDequeue(out QDataExt))
+                                {
+                                    ArrayDataExt[i] = QDataExt;
+                                }
+                                else
+                                {
+                                    ArrayDataExt[i] = null;
+                                }
+                            } //END For Qelements.
 
-            } catch (Exception e)
+                            tempVal = WriteDB(ArrayDataExt);
+                            if (retVal == 0) retVal = tempVal;
+                            if (tempVal < 0) retVal = tempVal;
+
+                        } //END If Queue is Empty.
+
+                    } //END Foreach Queue FIFO
+
+            }
+            catch (Exception e)
             {
                 Status.NewStat(StatT.Bad, e.Message);
                 return -100;
             }
+
+            return retVal;
 
         }// END Fucntion DoCycle
 
@@ -613,55 +617,87 @@ namespace DriverCommApp.Historics
         public int CleanHist()
         {
             //Delete old DB registers
-            int retVal;
+            int retVal = -1;
 
-            if (HistConf.SrvEn == HSrvSelection.MasterOnly)
+            if (HistConf.SrvEn == HistConfClass.SrvSelection.MasterOnly)
             {
                 //Clear OLD Master Server Registers.
-                retVal = MasterMySQL.CleanHist();
-                MasterWStat.statusMSG = MasterMySQL.status;
+                if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    if (CleanMySQL(MasterMySQL)) retVal = 0;
+                Status.AddSummary(MasterMySQL.Status.GetSummary());
 
-                if (retVal < 0)
-                { GeneralStat.StatAllOK = true; }
-                else
-                { GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG; }
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Master Srv Clean Failed.");
             }
-            else if (HistConf.SrvEn == HSrvSelection.BackupOnly)
+            else if (HistConf.SrvEn == HistConfClass.SrvSelection.BackupOnly)
             {
                 //Clear OLD Master Server Registers.
-                retVal = BackupMySQL.CleanHist();
-                BackupWStat.statusMSG = BackupMySQL.status;
+                if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    if (CleanMySQL(BackupMySQL)) retVal = 0;
+                Status.AddSummary(MasterMySQL.Status.GetSummary());
 
-                if (retVal < 0)
-                { GeneralStat.StatAllOK = true; }
-                else
-                { GeneralStat.statusMSG = "BackupHist: " + BackupWStat.statusMSG; }
+                if (retVal != 0) Status.NewStat(StatT.Warning, "Backup Srv Clean Failed.");
             }
-            else if (HistConf.SrvEn == HSrvSelection.BothSrv)
+            else if (HistConf.SrvEn == HistConfClass.SrvSelection.BothSrv)
             {
                 //Clear the old registers.
-                retVal = MasterMySQL.CleanHist();
-                if (retVal < 0) { MasterWStat.StatAllOK = true; }
-                else { MasterWStat.StatAllOK = false; MasterWStat.statusMSG = MasterMySQL.status; }
+                Task<bool> taskMaster = null, taskBackup = null;
 
-                retVal = BackupMySQL.CleanHist();
-                if (retVal < 0) { BackupWStat.StatAllOK = true; }
-                else { BackupWStat.StatAllOK = false; BackupWStat.statusMSG = BackupMySQL.status; }
+                if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskMaster = new Task<bool>(() => CleanMySQL(MasterMySQL));
 
-                //Only one ok return 1
-                if ((MasterWStat.StatAllOK) || (BackupWStat.StatAllOK)) retVal = 1;
+                if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
+                    taskBackup = new Task<bool>(() => CleanMySQL(BackupMySQL));
 
-                //All ok return 0
-                if ((MasterWStat.StatAllOK) && (BackupWStat.StatAllOK))
-                { retVal = 0; GeneralStat.StatAllOK = true; }
+                if ((taskMaster != null) && (taskBackup != null))
+                {
+                    //Start the Tasks
+                    taskMaster.Start();
+                    taskBackup.Start();
+
+                    //Now Wait for them
+                    taskMaster.Wait();
+                    taskBackup.Wait();
+
+                    //Check Result of Master
+                    if (!taskMaster.Result)
+                        Status.NewStat(StatT.Warning, "Master Srv Clean Failed.");
+
+                    //Check Result of Backup
+                    if (!taskBackup.Result)
+                        Status.NewStat(StatT.Warning, "Backup Srv Clean Failed.");
+
+                    //Only one ok return 1
+                    if ((taskMaster.Result) || (taskBackup.Result)) retVal = 1;
+
+                    //All ok return 0
+                    if ((taskMaster.Result) && (taskBackup.Result)) retVal = 0;
+                }
                 else
                 {
-                    GeneralStat.statusMSG = "MasterHist: " + MasterWStat.statusMSG +
-                          Environment.NewLine + "BackupHist: " + BackupWStat.statusMSG;
+                    Status.NewStat(StatT.Bad, "Wrong Config Params.");
+                    retVal = -10;
                 }
             }
             return 0;
         } //END Function CleanHist
+
+        /// <summary>
+        /// Write data into the Historics (MySQL). </summary>
+        private bool CleanMySQL(HistMySQL.Hist_MySQL HObject)
+        {
+            bool retVal = false;
+
+            if (Thread.CurrentThread.Name == null)
+                Thread.CurrentThread.Name = "DBClean";
+
+            if (HObject.isInitialized)
+            {
+                retVal = HObject.CleanHist();
+                Status.AddSummary(HObject.Status.GetSummary());
+            }
+
+            return retVal;
+        } //END WriteMySQL Function
 
 
         #region IDisposable Support
@@ -680,8 +716,11 @@ namespace DriverCommApp.Historics
 
                 // free unmanaged resources (unmanaged objects) and override a finalizer below.
                 // set large fields to null.
-                MasterWStat.DataWrite = null;
-                BackupWStat.DataWrite = null;
+                FIFO_Hist = null;
+                DriversHistConf = null;
+                IdtoPos = null;
+                Status = null;
+                Worker = null;
 
                 disposedValue = true;
             }

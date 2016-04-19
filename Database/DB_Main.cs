@@ -375,6 +375,20 @@ namespace DriverCommApp.Database
             return retVal;
         } */
 
+
+        /// <summary>
+        /// Close all connections after workers are stopped.
+        /// </summary>
+        public int CloseALL()
+        {
+
+            if (MasterMySQL != null) MasterMySQL.Disconnect();
+            if (BackupMySQL != null) BackupMySQL.Disconnect();
+
+            Status.FlushLog();
+            return -1;
+        }
+
         /// <summary>
         /// Count the number and type of vars in the Var Tree.
         /// </summary>
@@ -452,6 +466,7 @@ namespace DriverCommApp.Database
                 // free unmanaged resources (unmanaged objects) and override a finalizer below.
                 // set large fields to null.
                 DriversConf = null;
+                Status = null;
 
                 disposedValue = true;
             }

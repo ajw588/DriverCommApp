@@ -334,6 +334,20 @@ namespace DriverCommApp.Stat
         }
 
         /// <summary>
+        /// Write Log File on Exit. 
+        /// Call this function on exit of the program/thread 
+        /// to write the remaining log lines.</summary>
+        public void FlushLog()
+        {
+            if (LogFileEN)
+                lock (LockList)
+                {
+                    WriteLog();
+                }
+        }
+
+
+        /// <summary>
         /// Write Log File. </summary>
         private void WriteLog()
         {

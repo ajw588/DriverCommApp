@@ -255,7 +255,7 @@ namespace DriverCommApp.Database.DBMySQL
 
         /// <summary>
         /// Disconnect from the database. </summary>
-        private bool Disconnect()
+        public bool Disconnect()
         {
             try
             {
