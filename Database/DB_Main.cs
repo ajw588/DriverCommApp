@@ -194,26 +194,25 @@ namespace DriverCommApp.Database
         /// <summary>
         /// Write data into the database.
         /// <param name="DataExt">Data readed from devices to be writen into the database.</param> </summary>
-        public int WriteDB(DriverComm.DataExtClass[] DataExt)
+        public bool WriteDB(DriverComm.DataExtClass[] DataExt)
         {
-            int retVal;
-            retVal = -1;
+            bool retVal = false;
 
-            if (!isInitialized) return -2;
+            if (!isInitialized) return false;
 
             if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.MasterOnly)
             {
                 if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
-                    if (WriteMySQL(MasterMySQL, DataExt)) retVal = 0;
+                    retVal = WriteMySQL(MasterMySQL, DataExt);
 
-                if (retVal != 0) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
+                if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
             }
             else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BackupOnly)
             {
                 if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
-                    if (WriteMySQL(BackupMySQL, DataExt)) retVal = 0;
+                    retVal = WriteMySQL(BackupMySQL, DataExt);
 
-                if (retVal != 0) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
+                if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
             }
             else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BothSrv)
             {
@@ -247,16 +246,14 @@ namespace DriverCommApp.Database
                     if (!taskBackup.Result)
                         Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
 
-                    //Only one ok return 1
-                    if ((taskMaster.Result) || (taskBackup.Result)) retVal = 1;
+                    //At least one ok return true
+                    if ((taskMaster.Result) || (taskBackup.Result)) retVal = true;
 
-                    //All ok return 0
-                    if ((taskMaster.Result) && (taskBackup.Result)) retVal = 0;
                 }
                 else
                 {
                     Status.NewStat(StatT.Bad, "Wrong Config Params.");
-                    retVal = -10;
+                    retVal = false;
                 }
             }//END Both Srv Selection
 
@@ -288,46 +285,31 @@ namespace DriverCommApp.Database
         /// <summary>
         /// Read data from the database.
         /// <param name="DataExt">Data readed from the database to be writen into the devices.</param>  </summary>
-        public int ReadDB(DriverComm.DataExtClass[] DataExt)
+        public bool ReadDB(DriverComm.DataExtClass[] DataExt)
         {
-            int retVal;
-            retVal = -1;
+            bool retVal = false;
 
-            if (!isInitialized) return -2;
+            if (!isInitialized) return false;
 
             //Read first reads from master if Enabled. 
             if (DatabaseConf.MasterSrv.Enable)
             {
                 if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                 {
-                    if (MasterMySQL.Read(DataExt))
-                    {
-                        retVal = 0;
-                        Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
-                    }
-                    else
-                    {
+                    retVal = MasterMySQL.Read(DataExt);
 
-                    }
+                    if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
                 }
             } //END IF Master is Enabled
 
             //Only in case reading from Master fails, then it reads from backup.
-            if ((DatabaseConf.BackupSrv.Enable) && (retVal < 0))
+            if ((DatabaseConf.BackupSrv.Enable) && (!retVal))
             {
-                
-                
                 if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                 {
-                    if (BackupMySQL.Read(DataExt))
-                    {
-                        retVal = 0;
-                        Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
-                    }
-                    else
-                    {
+                    retVal = BackupMySQL.Read(DataExt);
 
-                    }
+                    if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
                 }
             } //IF needs to read from Backup
 

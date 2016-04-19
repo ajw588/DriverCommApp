@@ -15,8 +15,8 @@ namespace DriverCommApp
         public struct WorkerProgress
         {
             public string LoopTime;
-            public int DVint, DBint;
-            public string DBstat, DVstat;
+            public int DVint, DBint, HISTint;
+            public string DBstat, DVstat, HITSstat;
         }
 
         //My Working Thread
@@ -89,6 +89,23 @@ namespace DriverCommApp
         }
 
         /// <summary>
+        /// Start the thread runing the work loop. </summary>
+        private void StartBackgroundWorker()
+        {
+            //Check if a Background Worker has been launched already
+            if (!RuningWork)
+                //Initialize the Worker for the Work Loop.
+                if (InitializeBackgroundWorker())
+                {
+                    // Start the asynchronous operation.               
+                    bgnWorker1.RunWorkerAsync();
+
+                    RuningWork = true;
+
+                }
+        } //END Function StartBackgroundWorker
+
+        /// <summary>
         /// Initialize the thread to run the work loop. </summary>
         private bool InitializeBackgroundWorker()
         {
@@ -101,8 +118,8 @@ namespace DriverCommApp
 
             //Initial Message
             ToReport = new WorkerProgress();
-            ToReport.DVstat = "Initializing..."; ToReport.DBstat = "Initializing...";
-            ToReport.DVint = 1; ToReport.DBint = 1; ToReport.LoopTime = "000";
+            ToReport.DVstat = "Initializing..."; ToReport.DBstat = "Initializing..."; ToReport.HITSstat = "Initializing...";
+            ToReport.DVint = 1; ToReport.DBint = 1; ToReport.HISTint = 1; ToReport.LoopTime = "000";
 
             //Update the GUI
             UpdGUI(ToReport);
@@ -123,7 +140,6 @@ namespace DriverCommApp
             bgnWorker1.WorkerReportsProgress = true;
             bgnWorker1.WorkerSupportsCancellation = true;
 
-            
 
             finalTime = DateTime.Now;
             msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
@@ -134,23 +150,6 @@ namespace DriverCommApp
 
             //finalize
             return true;
-        }
-
-        /// <summary>
-        /// Start the thread runing the work loop. </summary>
-        private void StartBackgroundWorker()
-        {
-            //Check if a Background Worker has been launched already
-            if (!RuningWork)
-                //Initialize the Worker for the Work Loop.
-                if (InitializeBackgroundWorker())
-                {
-                    // Start the asynchronous operation.               
-                    bgnWorker1.RunWorkerAsync();
-
-                    RuningWork = true;
-
-                }
         }
 
         /// <summary>
@@ -214,10 +213,9 @@ namespace DriverCommApp
             {
                 ToReport.DVstat = "Failed: check for error messages."; ToReport.DVint = 3;
                 ToReport.DBstat = "Application failed to initialize, and won't continue."; ToReport.DBint = 3;
+                ToReport.HITSstat = "Application failed to initialize, and won't continue."; ToReport.HISTint = 3;
                 UpdGUI(ToReport);
             }
-
-            
         }
 
         /// <summary>
@@ -261,7 +259,10 @@ namespace DriverCommApp
                 while (WaitCount < 100)
                 {
                     ObjMainWork.StopWorkers();
-                    if (ObjMainWork.WorkersRuning) WaitCount = 1000;
+                    
+                    if (!ObjMainWork.WorkersRuning) { WaitCount = 1000; }
+                    else { Thread.Sleep(100); }
+
                     WaitCount++;
                 }
 
@@ -282,7 +283,7 @@ namespace DriverCommApp
             WorkerProgress StatReport;
 
             //Get the report data
-            StatReport = (WorkerProgress)e.UserState;
+            StatReport = (WorkerProgress) e.UserState;
 
             //Update the GUI
             UpdGUI(StatReport);
@@ -297,7 +298,6 @@ namespace DriverCommApp
             WorkerProgress ToReport;
             DateTime initialTime, finalTime;
             long msSpan;
-
 
             //Initialize variables
             ToReport = new WorkerProgress();

@@ -28,6 +28,7 @@ namespace DriverCommApp.Stat
             Reserved = 0,
             Drv1 = 1, Drv2, Drv3, Drv4, Drv5, Drv6, Drv7, Drv8, Drv9, Drv10, Drv11,
             Drv12, Drv13, Drv14, Drv15, Drv16, Drv17, Drv18, Drv19, Drv20, DrvAll = 100,
+            MainTr=140, MainGui, AuxTr, AuxGui,
             DBall = 160, DB, DBbackup,
             Histall = 180, Hist, Histbackup,
             Collection = 200
@@ -455,6 +456,10 @@ namespace DriverCommApp.Stat
 
             //If both are same type
             if (CheckID1 == CheckID2) retVal = true;
+
+            //If MainTr, and GUI, (including Aux types) are compatible.
+            if ( (CheckID1 >= IDdef.MainTr) && (CheckID1 <= IDdef.AuxGui) )
+                if ((CheckID2 >= IDdef.MainTr) && (CheckID2 <= IDdef.AuxGui)) retVal = true;
 
             //If type is Generic Driver
             if ((CheckID1 == IDdef.DrvAll) &&
