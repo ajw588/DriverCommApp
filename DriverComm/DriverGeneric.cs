@@ -364,9 +364,9 @@ namespace DriverCommApp.DriverComm
 
         /// <summary>
         /// Read data from the drivers.</summary>
-        public int Read()
+        public bool Read()
         {
-            int retVal = -10;
+            bool retVal = false;
 
             if (isInitialized && isConnected)
                 switch (thisDriverConf.Type)
@@ -401,9 +401,9 @@ namespace DriverCommApp.DriverComm
 
         /// <summary>
         /// Write data to the drivers.</summary>
-        public int Write()
+        public bool Write()
         {
-            int retVal = -10;
+            bool retVal = false;
 
             if (isInitialized && isConnected)
                 switch (thisDriverConf.Type)
@@ -465,17 +465,14 @@ namespace DriverCommApp.DriverComm
                     case DriverConfig.DriverType.XWave:
                         ObjDriverXWave.Disconect();
                         isConnected = ObjDriverXWave.isConnected;
-                        Status = ObjDriverXWave.Status;
                         break;
                     case DriverConfig.DriverType.S7_TCP:
                         ObjDriverS7.Disconect();
                         isConnected = ObjDriverS7.isConnected;
-                        Status = ObjDriverS7.Status;
                         break;
                     case DriverConfig.DriverType.ModbusTCP:
                         ObjDriverModTCP.Disconect();
                         isConnected = ObjDriverModTCP.isConnected;
-                        Status = ObjDriverModTCP.Status;
                         break;
                     default:
                         Status.NewStat(StatType.Warning, "Wrong Driver Type, Check Config.");

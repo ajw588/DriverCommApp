@@ -72,150 +72,161 @@ namespace DriverCommApp.DriverComm.ModbusTCP
             //Byte register order. HighLow=Big-endian.
             RegOrder = ModbusClient.RegisterOrder.HighLow;
 
-            Status.ResetStat();
         }
 
         /// <summary>
         /// Initialize the object class and prepares for the Server Device connection.</summary>
         public void Initialize()
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
+            bool retVal = true;
+            int i, j, SAddress;
+            DAConfClass thisArea;
 
-            if ((!isInitialized) && (MasterDriverConf.Enable))
+            if (!((MasterDriverConf != null) && (Status != null)))
             {
-                int i, SAddress;
-                DAConfClass thisArea;
+                retVal = false;
+                Status.NewStat(StatType.Warning, "Master Objects are Invalid.");
+            }
 
-                try
+            if (retVal)
+                if ((!isInitialized) && (MasterDriverConf.Enable))
                 {
-
-
-                    //Create the driver object
-                    ModTCPObj = new ModbusClient(MasterDriverConf.Address, MasterDriverConf.portTCP);
-                    ModTCPObj.ConnectionTimeout = MasterDriverConf.Timeout;
-
-                    IntData = new ModbusDataConta[MasterDriverConf.NDataAreas];
-
-                    //Cicle and configure the data areas
-                    for (i = 0; i < MasterDriverConf.NDataAreas; i++)
+                    
+                    try
                     {
-                        thisArea = MasterDataAreaConf[i];
-                        SAddress = int.Parse(thisArea.StartAddress);
+                        //Create the driver object
+                        ModTCPObj = new ModbusClient(MasterDriverConf.Address, MasterDriverConf.portTCP);
+                        ModTCPObj.ConnectionTimeout = MasterDriverConf.Timeout;
 
-                        if (thisArea.Enable)
+                        IntData = new ModbusDataConta[MasterDriverConf.NDataAreas];
+
+                        j = 0;  //Count the enabled Data Areas
+
+                        //Cicle and configure the data areas
+                        for (i = 0; i < MasterDriverConf.NDataAreas; i++)
                         {
-                            switch (thisArea.dataType)
-                            {
-                                case DriverConfig.DatType.Bool:
-                                    IntData[i].dBoolean = new bool[thisArea.Amount];
-                                    break;
-                                case DriverConfig.DatType.Byte:
-                                case DriverConfig.DatType.Word:
-                                    IntData[i].dInt = new int[thisArea.Amount];
-                                    break;
-                                case DriverConfig.DatType.DWord:
-                                case DriverConfig.DatType.Real:
-                                    IntData[i].dInt = new int[(thisArea.Amount * 2)];
-                                    break;
-                                default:
-                                    Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
-                                    break;
-                            }
-                        }// Area Enable
-                    } // For Data Areas
+                            thisArea = MasterDataAreaConf[i];
+                            SAddress = int.Parse(thisArea.StartAddress);
 
-                    Status.NewStat(StatType.Good);
-                    isInitialized = true;
-                }
-                catch (Exception e)
-                {
-                    Status.NewStat(StatType.Bad, e.Message);
-                    isInitialized = false;
-                }
-            } //IF Not Initialized and Driver is Enabled
+                            if (thisArea.Enable)
+                            {
+                                switch (thisArea.dataType)
+                                {
+                                    case DriverConfig.DatType.Bool:
+                                        IntData[i].dBoolean = new bool[thisArea.Amount];
+                                        break;
+                                    case DriverConfig.DatType.Byte:
+                                    case DriverConfig.DatType.Word:
+                                        IntData[i].dInt = new int[thisArea.Amount];
+                                        break;
+                                    case DriverConfig.DatType.DWord:
+                                    case DriverConfig.DatType.Real:
+                                        IntData[i].dInt = new int[(thisArea.Amount * 2)];
+                                        break;
+                                    default:
+                                        retVal = false;
+                                        Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                        break;
+                                }
+                                j++;
+                            }// Area Enable
+                        } // For Data Areas
+
+                        //check there is enabled data areas.
+                        if (j == 0) retVal = false;
+                    }
+                    catch (Exception e)
+                    {
+                        Status.NewStat(StatType.Bad, e.Message);
+                        isInitialized = false;
+                    }
+                } //IF Not Initialized and Driver is Enabled
+
+            if (retVal)
+                Status.NewStat(StatType.Good);
+            else
+                Status.NewStat(StatType.Bad, "Initialization Failed.");
+
+            isInitialized = retVal;
         }
 
         /// <summary>
         /// Attemps to connect to the Server Device.</summary>
         public void Connect()
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
 
-            if (!isConnected)
+            if ((!isConnected) && (isInitialized))
                 try
                 {
                     ModTCPObj.Connect(MasterDriverConf.Address, MasterDriverConf.portTCP);
                     isConnected = ModTCPObj.Connected;
+
+                    if (isConnected)
+                        Status.NewStat(StatType.Good);
+                    else
+                        Status.NewStat(StatType.Warning, "Connection Failed");
                 }
                 catch (Exception e)
                 {
                     Status.NewStat(StatType.Warning, e.Message);
                 }
-                finally
-                {
-                    isConnected = ModTCPObj.Connected;
-                    Status.NewStat(StatType.Good);
-                }
+                
         } // END Function Connect
 
         /// <summary>
         /// Disconnect from the Server Device.</summary>
         public void Disconect()
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
-
             try
             {
-                ModTCPObj.Disconnect();
+                if (ModTCPObj!=null) ModTCPObj.Disconnect();
                 isConnected = false;
+
+                if (isInitialized)
+                    Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(StatType.Warning, e.Message);
-            }
-            finally
-            {
-                isConnected = false;
-                Status.NewStat(StatType.Good);
+                if (isInitialized)
+                    Status.NewStat(StatType.Warning, e.Message);
             }
 
         } //End Function Disconnect
 
         /// <summary>
         /// Reads data from the Server Device.</summary>
-        public int Read(DataExtClass[] DataOut)
+        public bool Read(DataExtClass[] DataOut)
         {
-            int i, j, jj, SAddress, retVar;
+            bool retVar = false;
+            int i, j, jj, SAddress;
             uint highWord, lowWord;
             DAConfClass thisArea;
-            retVar = -1;
-
-            //Reset the Status Buffer
-            Status.ResetStat();
 
             //If is not initialized and not connected return  error.
             if (!(isInitialized && isConnected))
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Reading");
-                return retVar;
+                return false;
             }
+
+            if (DataOut == null)
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Corruption");
+                return false;
+            }
+
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataOut.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
             {
                 Status.NewStat(StatType.Bad, "Data Containers Mismatch");
-                return retVar;
+                return false;
             }
-                
 
             //Cicle thru Data Areas.
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
             {
                 thisArea = MasterDataAreaConf[i];
                 SAddress = int.Parse(thisArea.StartAddress);
-                retVar = -1;
 
                 if (thisArea.Enable && (!thisArea.Write))
                 {
@@ -227,19 +238,19 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                             case DriverConfig.DatType.Bool:
                                 IntData[i].dBoolean = ModTCPObj.ReadCoils(SAddress, thisArea.Amount);
                                 //Check read complete set of data
-                                if (IntData[i].dBoolean.Length == thisArea.Amount) retVar = 0;
+                                if (IntData[i].dBoolean.Length == thisArea.Amount) retVar = true;
                                 break;
                             case DriverConfig.DatType.Byte:
                             case DriverConfig.DatType.Word:
                                 IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, thisArea.Amount);
                                 //Check read complete set of data
-                                if (IntData[i].dInt.Length == thisArea.Amount) retVar = 0;
+                                if (IntData[i].dInt.Length == thisArea.Amount) retVar = true;
                                 break;
                             case DriverConfig.DatType.DWord:
                             case DriverConfig.DatType.Real:
                                 IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, (2 * thisArea.Amount));
                                 //Check read complete set of data
-                                if (IntData[i].dInt.Length == (2 * thisArea.Amount)) retVar = 0;
+                                if (IntData[i].dInt.Length == (2 * thisArea.Amount)) retVar = true;
                                 break;
                             default:
                                 Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
@@ -249,11 +260,11 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                     catch (Exception e)
                     {
                         Status.NewStat(StatType.Bad, e.Message);
-                        retVar = -10;
+                        return false;
                     }
 
                     //Copy data to the Data Out
-                    if (retVar == 0)
+                    if (retVar)
                     {
                         jj = 0; //Index reinitialize
 
@@ -262,15 +273,15 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                             switch (thisArea.dataType)
                             {
                                 case DriverConfig.DatType.Bool:
-                                    if (DataOut[i].Data.dBoolean.Length > j)
+                                    if ( (DataOut[i].Data.dBoolean!=null) && (DataOut[i].Data.dBoolean.Length > j) )
                                         DataOut[i].Data.dBoolean[j] = IntData[j].dBoolean[j];
                                     break;
                                 case DriverConfig.DatType.Byte:
-                                    if (DataOut[i].Data.dByte.Length > j)
+                                    if ( (DataOut[i].Data.dByte != null) && (DataOut[i].Data.dByte.Length > j) )
                                         DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & MaskByte);
                                     break;
                                 case DriverConfig.DatType.Word:
-                                    if (DataOut[i].Data.dWord.Length > j)
+                                    if ( (DataOut[i].Data.dWord != null) && (DataOut[i].Data.dWord.Length > j) )
                                         DataOut[i].Data.dWord[j] = (ushort)(IntData[i].dInt[j] & MaskWord);
                                     break;
                                 case DriverConfig.DatType.DWord:
@@ -291,17 +302,20 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                                     //Store the value in the DataOut.
                                     if (thisArea.dataType == DriverConfig.DatType.DWord)
                                     {
-                                        if (DataOut[i].Data.dDWord.Length > j)
+                                        if ((DataOut[i].Data.dDWord != null) && (DataOut[i].Data.dDWord.Length > j) )
                                             DataOut[i].Data.dDWord[j] = (highWord | lowWord);
                                     }
                                     else
                                     {
                                         //Float point decimal.
-                                        if (DataOut[i].Data.dReal.Length > j)
+                                        if ((DataOut[i].Data.dReal != null) && (DataOut[i].Data.dReal.Length > j) )
                                             DataOut[i].Data.dReal[j] = (highWord | lowWord) / ((float)1000.0);
                                     }
 
                                     jj = jj + 2;
+                                    break;
+                                default:
+                                    Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
                                     break;
                             }
                         } // For j
@@ -309,10 +323,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                         DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
                     }
                     else
-                    { 
+                    {
                         Status.NewStat(StatType.Warning, "ModBus Read error..");
                         DataOut[i].NowTimeTicks = 0;
-
                     } //if retVar == 0. Was reading ok?
 
                 }// Area Enable
@@ -324,38 +337,39 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DataExtClass[] DataIn)
+        public bool Write(DataExtClass[] DataIn)
         {
-            int i, j, jj, SAddress, retVar;
+            bool retVar = false;
+            int i, j, jj, SAddress;
             uint intFloat;
             DAConfClass thisArea;
-
-            retVar = -1;
-
-            //Reset the Status Buffer
-            Status.ResetStat();
 
             //If is not initialized and not connected return  error
             if (!(isInitialized && isConnected))
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Writing");
-                return retVar;
+                return false;
+            }
+
+            if (DataIn == null)
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Corruption");
+                return false;
             }
 
             //If the DataIn and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataIn.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
             {
                 Status.NewStat(StatType.Bad, "Data Containers Mismatch");
-                return retVar;
+                return false;
             }
 
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
             {
                 thisArea = MasterDataAreaConf[i];
                 SAddress = int.Parse(thisArea.StartAddress);
-                retVar = -1;
 
-                if (thisArea.Enable && (thisArea.Write))
+                if (thisArea.Enable && thisArea.Write)
                 {
                     jj = 0; //Index reinitialize
 
@@ -447,11 +461,12 @@ namespace DriverCommApp.DriverComm.ModbusTCP
 
                         //Report Good
                         Status.NewStat(StatType.Good);
+                        retVar = true;
                     }
                     catch (Exception e)
                     {
                         Status.NewStat(StatType.Bad, e.Message);
-                        retVar = -10;
+                        return false;
                     }
 
                 }// Area Enable

@@ -397,7 +397,7 @@ namespace DriverCommApp.Stat
 
         /// <summary>
         /// Produce a string with the report Info. </summary>
-        private string RepoToString(ReportProgress RepoIn)
+        private static string RepoToString(ReportProgress RepoIn)
         {
             string toWrite=string.Empty;
             DateTime timestamp;
@@ -421,7 +421,7 @@ namespace DriverCommApp.Stat
 
         /// <summary>
         /// Rules to merge the status. </summary>
-        private StatT MergeStatus( StatT Stat1, StatT Stat2)
+        public static StatT MergeStatus( StatT Stat1, StatT Stat2)
         {
             StatT OutStat;
 
@@ -444,7 +444,7 @@ namespace DriverCommApp.Stat
 
         /// <summary>
         /// Returns True if IDs are compatible. </summary>
-        private bool CheckCompatible(IDdef CheckID1, IDdef CheckID2)
+        private static bool CheckCompatible(IDdef CheckID1, IDdef CheckID2)
         {
             bool retVal = false;
 

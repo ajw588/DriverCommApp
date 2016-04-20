@@ -6,6 +6,9 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 
+//This App Namespace
+using IdDef = DriverCommApp.Stat.StatReport.IDdef;
+
 namespace DriverCommApp
 {
     public partial class MainScreen : Form
@@ -109,7 +112,7 @@ namespace DriverCommApp
         /// Initialize the thread to run the work loop. </summary>
         private bool InitializeBackgroundWorker()
         {
-            
+
             long msCycle;
             DateTime initialTime, finalTime;
             WorkerProgress ToReport;
@@ -158,10 +161,13 @@ namespace DriverCommApp
         private void bgnWorker1_DoWork(object sender,
             DoWorkEventArgs e)
         {
-            int retVal;
+            int i, retVal;
             long msSpan;
+            long[] Timmings;
             WorkerProgress ToReport;
             DateTime initialTime, finalTime;
+            Stat.StatReport StatColl;
+            Stat.StatReport.ReportProgress RepoCollA, RepoCollB;
 
             //Get time
             initialTime = DateTime.Now;
@@ -181,25 +187,38 @@ namespace DriverCommApp
 
             //Initialize the Drivers and Database.
             retVal = ObjMainWork.Initialize();
+            ObjMainWork.UpdStatus(); //Update the Status Collection.
+
+            StatColl = ObjMainWork.StatusColl;
 
             //Collect Status Information
-            if (retVal != 0)
-            {
-                ToReport.DVstat = ObjMainWork.StatDVMain.StatMSG;
-                ToReport.DBstat = ObjMainWork.StatDBMain.StatMSG;
-                ToReport.DVint = (int)ObjMainWork.StatDVMain.StatInt;
-                ToReport.DBint = (int)ObjMainWork.StatDBMain.StatInt;
-            }
-            else
-            {
-                ToReport.DVstat = ObjMainWork.StatDVMain.StatMSG; ToReport.DVint = 1;
-                ToReport.DBstat = ObjMainWork.StatDBMain.StatMSG; ToReport.DBint = 1;
-            }
+            RepoCollA = StatColl.GetSummary((int)IdDef.MainTr);
+            RepoCollB = StatColl.GetSummary((int)IdDef.DBall);
+
+            //Main Cycle, and Database
+            ToReport.DBstat = RepoCollA.StatMsg + Environment.NewLine + RepoCollB.StatMsg;
+            ToReport.DBint = (int) Stat.StatReport.MergeStatus(RepoCollA.Stat, RepoCollB.Stat);
+
+            //Historics
+            RepoCollB = StatColl.GetSummary((int)IdDef.Histall);
+            ToReport.HITSstat = RepoCollB.StatMsg;
+            ToReport.HISTint = (int)RepoCollB.Stat;
+
+            //Drivers Status
+            RepoCollB = StatColl.GetSummary((int)IdDef.DrvAll);
+            ToReport.DVstat = RepoCollB.StatMsg;
+            ToReport.DVint = (int) RepoCollB.Stat;
 
             //Get the time span
             finalTime = DateTime.Now;
             msSpan = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
+
             ToReport.LoopTime = msSpan.ToString();
+            Timmings = StatColl.GetTimeLoops();
+            for (i = 1; i < Timmings.Length; i++)
+            {
+                ToReport.LoopTime = " / " + Timmings.ToString();
+            }
 
             worker.ReportProgress(0, ToReport);
 
@@ -259,7 +278,7 @@ namespace DriverCommApp
                 while (WaitCount < 100)
                 {
                     ObjMainWork.StopWorkers();
-                    
+
                     if (!ObjMainWork.WorkersRuning) { WaitCount = 1000; }
                     else { Thread.Sleep(100); }
 
@@ -283,7 +302,7 @@ namespace DriverCommApp
             WorkerProgress StatReport;
 
             //Get the report data
-            StatReport = (WorkerProgress) e.UserState;
+            StatReport = (WorkerProgress)e.UserState;
 
             //Update the GUI
             UpdGUI(StatReport);
@@ -295,13 +314,16 @@ namespace DriverCommApp
         private void DoTheCicle(BackgroundWorker Worker, DoWorkEventArgs e)
         {
             int i, msCycle, ToSleep;
+            long msSpan;
+            long[] Timmings;
             WorkerProgress ToReport;
             DateTime initialTime, finalTime;
-            long msSpan;
+            Stat.StatReport StatColl;
+            Stat.StatReport.ReportProgress RepoCollA, RepoCollB;
 
             //Initialize variables
             ToReport = new WorkerProgress();
-            msSpan = 0;  msCycle = 500; i = 0;
+            msSpan = 0; msCycle = 500; i = 0;
 
             while (!e.Cancel)
             {
@@ -323,16 +345,36 @@ namespace DriverCommApp
                     //Update the GUI
                     if (ObjMainWork.WorkersRuning)
                     {
-                        ToReport.DVstat = ObjMainWork.StatDVMain.StatMSG;
-                        ToReport.DBstat = ObjMainWork.StatDBMain.StatMSG;
+                        StatColl = ObjMainWork.StatusColl;
 
-                        ToReport.DVint = (int)ObjMainWork.StatDVMain.StatInt;
-                        ToReport.DBint = (int)ObjMainWork.StatDBMain.StatInt;
+                        //Collect Status Information
+                        RepoCollA = StatColl.GetSummary((int)IdDef.MainTr);
+                        RepoCollB = StatColl.GetSummary((int)IdDef.DBall);
 
-                        ToReport.LoopTime = " ";
-                        ObjMainWork.StatDVMain.ID_Time[0] = msSpan; //Main Cycle
-                        foreach (int valms in ObjMainWork.StatDVMain.ID_Time)
-                            ToReport.LoopTime = ToReport.LoopTime + " / " + valms.ToString();
+                        //Main Cycle, and Database
+                        ToReport.DBstat = RepoCollA.StatMsg + Environment.NewLine + RepoCollB.StatMsg;
+                        ToReport.DBint = (int)Stat.StatReport.MergeStatus(RepoCollA.Stat, RepoCollB.Stat);
+
+                        //Historics
+                        RepoCollB = StatColl.GetSummary((int)IdDef.Histall);
+                        ToReport.HITSstat = RepoCollB.StatMsg;
+                        ToReport.HISTint = (int)RepoCollB.Stat;
+
+                        //Drivers Status
+                        RepoCollB = StatColl.GetSummary((int)IdDef.DrvAll);
+                        ToReport.DVstat = RepoCollB.StatMsg;
+                        ToReport.DVint = (int)RepoCollB.Stat;
+
+                        //Get the time span
+                        finalTime = DateTime.Now;
+                        msSpan = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
+
+                        ToReport.LoopTime = msSpan.ToString();
+                        Timmings = StatColl.GetTimeLoops();
+                        for (i = 1; i < Timmings.Length; i++)
+                        {
+                            ToReport.LoopTime = " / " + Timmings.ToString();
+                        }
                     }
                     else
                     {
@@ -346,9 +388,9 @@ namespace DriverCommApp
                     //Sleep for the rest of the time cicle.
                     finalTime = DateTime.Now;
                     msSpan = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
-                    ToSleep=(int) (msCycle- msSpan);
+                    ToSleep = (int)(msCycle - msSpan);
 
-                    if (ToSleep>5) Thread.Sleep(ToSleep);
+                    if (ToSleep > 5) Thread.Sleep(ToSleep);
                 }
             } //While not Cancelation
 
@@ -364,21 +406,23 @@ namespace DriverCommApp
 
             txtMaxLenght = 32766;
             //Driver Status Messages
-            if (StatReport.DVstat.Length> txtMaxLenght)
+            if (StatReport.DVstat.Length > txtMaxLenght)
             {
                 strCopyLenght = StatReport.DVstat.Length - txtMaxLenght;
                 LBL_COMMStat.Text = StatReport.DVstat.Substring(strCopyLenght);
-            } else
+            }
+            else
             {
                 LBL_COMMStat.Text = StatReport.DVstat;
             }
 
             //Database Status Messages
-            if (StatReport.DBstat.Length> txtMaxLenght)
+            if (StatReport.DBstat.Length > txtMaxLenght)
             {
                 strCopyLenght = StatReport.DBstat.Length - txtMaxLenght;
                 LBL_DBStat.Text = StatReport.DBstat.Substring(strCopyLenght);
-            } else
+            }
+            else
             {
                 LBL_DBStat.Text = StatReport.DBstat;
             }

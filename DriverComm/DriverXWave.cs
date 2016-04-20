@@ -72,131 +72,122 @@ namespace DriverCommApp.DriverComm.XWave
         public void Initialize()
         {
             //Flag for the configuration validation.
-            bool retVal = false;
+            bool retVal = true;
 
-            //Reset the Status Buffer
-            Status.ResetStat();
-
-            if ((!isInitialized) && (MasterDriverConf.Enable))
+            if (!((MasterDriverConf != null) && (Status != null)))
             {
-                if (MasterDriverConf.Address.Length > 6)
+                retVal = false;
+                Status.NewStat(StatType.Warning, "Master Objects are Invalid.");
+            }
+
+            if (retVal)
+                if ((!isInitialized) && (!isConnected))
                 {
                     //Check the TCP port for the XWave device comms.
                     //Check the UDP port for the XWave device comms.
-                    if ((MasterDriverConf.portTCP > 100) && (MasterDriverConf.portUDP > 100))
-                        retVal = true; //Set flag as OK configuration.
-                }
-                else
-                {
-                    //Configuration is invalid, wrong IP address.
-                    Status.NewStat(StatType.Warning, "Wrong Config Params, Check Config.");
-                    retVal = false;
-                }
+                    if (!((MasterDriverConf.portTCP > 100) && (MasterDriverConf.portUDP > 100)))
+                    {
+                        retVal = false;
+                        Status.NewStat(StatType.Warning, "Wrong Config Params, Check Config.");
+                    }
 
-                try
-                {
-                    //Get the Vars Tree initialized from the XML configuration file.
+                    //Check the IP Address
+                    if (MasterDriverConf.Address.Length < 6)
+                    {
+                        retVal = false;
+                        Status.NewStat(StatType.Warning, "Wrong Config Params, Wrong IP.");
+                    }
+
+                    try
+                    {
+                        //Get the Vars Tree initialized from the XML configuration file.
+                        if (retVal)
+                            retVal = XWaveDriver.Init(MasterDriverConf.DefFile, out NumVars.nTVars, out DataInit);
+                    }
+                    catch (Exception e)
+                    {
+                        Status.NewStat(StatType.Bad, e.Message);
+                        retVal = false;
+                    }
+
+                    //Count the vars of each type from the Var Tree.
+                    if (retVal) retVal = CountVars();
+
                     if (retVal)
-                        retVal = XWaveDriver.Init(MasterDriverConf.DefFile, out NumVars.nTVars, out DataInit);
-                    Status.NewStat(StatType.Good);
+                        Status.NewStat(StatType.Good);
+                    else
+                        Status.NewStat(StatType.Bad, "Initialization Failed.");
+
+                    isInitialized = retVal;
                 }
-                catch (Exception e)
-                {
-                    Status.NewStat(StatType.Bad, e.Message);
-                }
-
-                //Count the vars of each type from the Var Tree.
-                if (retVal) retVal = CountVars();
-
-                if (retVal)
-                {
-                    isInitialized = true;
-                }
-
-            }
-
         }//END Function Initialize
 
         /// <summary>
         /// Attemps to connect to the Server Device.</summary>
         public void Connect()
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
-
-            try
-            {
-                if (isInitialized)
+            if ((isInitialized) && (!isConnected))
+                try
                 {
-                    if (!isConnected)
+                    TCPconn = new TcpClient();
+
+                    //Configure timeouts
+                    TCPconn.ReceiveTimeout = MasterDriverConf.Timeout;
+                    TCPconn.SendTimeout = MasterDriverConf.Timeout;
+
+                    //Connect to the TCP
+                    TCPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portTCP);
+
+                    if (TCPconn.Connected)
                     {
-                        TCPconn = new TcpClient();
-
-                        //Configure timeouts
-                        TCPconn.ReceiveTimeout = MasterDriverConf.Timeout;
-                        TCPconn.SendTimeout = MasterDriverConf.Timeout;
-
-                        //Connect to the TCP
-                        TCPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portTCP);
-
-                        if (TCPconn.Connected)
-                        {
-                            UDPconn = new UdpClient(MasterDriverConf.portUDP);
-                            //UDPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portUDP);
-                        }
-
-                    } //If Not Connected
+                        UDPconn = new UdpClient(MasterDriverConf.portUDP);
+                        //UDPconn.Connect(MasterDriverConf.Address, MasterDriverConf.portUDP);
+                    }
 
                     isConnected = TCPconn.Connected;
-                    Status.NewStat(StatType.Good);
-                }// If isInitialized
 
-            }
-            catch (Exception e)
-            {
-                Status.NewStat(StatType.Bad, e.Message);
-            }
+                    if (isConnected)
+                        Status.NewStat(StatType.Good);
+                    else
+                        Status.NewStat(StatType.Warning, "Connection Failed");
+                }
+                catch (Exception e)
+                {
+                    Status.NewStat(StatType.Bad, e.Message);
+                }
         } //END Connect Function
 
         /// <summary>
         /// Disconnect from the Server Device.</summary>
         public void Disconect()
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
 
             try
             {
-                if (isConnected)
-                {
-                    if (TCPconn != null) TCPconn.Close();
-                    // XWaveDriver.CloseConn(ConnectionID);
-                    if (UDPconn != null) UDPconn.Close();
-                    isConnected = false;
-                }
+                if (TCPconn != null) TCPconn.Close();
+                // XWaveDriver.CloseConn(ConnectionID);
+                if (UDPconn != null) UDPconn.Close();
+                isConnected = false;
 
-                Status.NewStat(StatType.Good);
+                if (isInitialized)
+                    Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(StatType.Bad, e.Message);
-                isConnected = false;
+                if (isInitialized)
+                    Status.NewStat(StatType.Bad, e.Message);
             }
         } //END Disconnect Function
 
         /// <summary>
         /// Reads data from the Server Device.
         /// /// <param name="DataOut">Object with the data beign readed</param> </summary>
-        public int Read(DataExtClass [] DataOut)
+        public bool Read(DataExtClass[] DataOut)
         {
             VarTree[,] DataRead;
             IPAddress addressIP;
-            int i, iBool, idWord, isWord, iFloat, retVar;
+            int i, iBool, idWord, isWord, iFloat;
             string returnData = string.Empty; byte[] receiveBytes; bool goodRead;
-            retVar = -1;
-
-            //Reset the Status Buffer
-            Status.ResetStat();
 
             //Creates an IPEndPoint to record the IP Address and port number of the sender. 
             // The IPEndPoint will allow you to read datagrams sent from any source.
@@ -207,14 +198,14 @@ namespace DriverCommApp.DriverComm.XWave
             if (!(isInitialized && isConnected))
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Reading");
-                return retVar;
+                return false;
             }
 
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
             if (!(DataOut.Length == 4))
             {
                 Status.NewStat(StatType.Bad, "Data Containers Mismatch");
-                return -2;
+                return false;
             }
 
             //Initialize the read.
@@ -236,7 +227,7 @@ namespace DriverCommApp.DriverComm.XWave
             catch (Exception e)
             {
                 Status.NewStat(StatType.Bad, e.Message);
-                return -10;
+                return false;
             }
 
             //If Getting data was sucessfull, then convert to local datatypes.
@@ -260,7 +251,7 @@ namespace DriverCommApp.DriverComm.XWave
                             {
                                 DataOut[0].Data.dBoolean[iBool] = DataRead[0, i].@bool;
 
-                                if (DataOut[0].VarNames[(NumVars.nBool - 1)]==null)
+                                if (DataOut[0].VarNames[(NumVars.nBool - 1)] == null)
                                     DataOut[0].VarNames[iBool] = DataRead[0, i].name;
 
                                 iBool++;
@@ -306,27 +297,26 @@ namespace DriverCommApp.DriverComm.XWave
                 } //For GetData
 
                 Status.NewStat(StatType.Good);
-                return 0;
+                return true;
             }
-            else {
+            else
+            {
                 DataOut[0].NowTimeTicks = 0; DataOut[1].NowTimeTicks = 0;
                 DataOut[2].NowTimeTicks = 0; DataOut[3].NowTimeTicks = 0;
 
                 Status.NewStat(StatType.Warning, "XWave Read error..");
-                return -1;
-            }// if CommOK
+                return false;
+            }// if goodRead
 
         } //END read function.
 
         /// <summary>
         /// Write data to the Server Device.
         /// <param name="DataIn">Object with the data to write</param></summary>
-        public int Write(DataExtClass [] DataIn)
+        public bool Write(DataExtClass[] DataIn)
         {
-            //Reset the Status Buffer
-            Status.ResetStat();
-
-            return 0;
+            Status.NewStat(StatType.Warning, "Write is not implemented in XWave Driver.");
+            return false;
         }
 
         /// <summary>

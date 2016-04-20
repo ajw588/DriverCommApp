@@ -258,10 +258,8 @@ namespace DriverCommApp.Historics
                 WorkersRuning = true;
                 return 0;
             }
-
             //Already something running, don't ask again.
             return -1;
-
         }
 
         /// <summary>
@@ -283,7 +281,6 @@ namespace DriverCommApp.Historics
         public int NewPackage(DriverComm.DataExtClass[] DataFromDv)
         {
             int retVal, k;
-
             retVal = -100;
 
             if ((isInitialized) && (DataFromDv != null))
@@ -297,7 +294,7 @@ namespace DriverCommApp.Historics
                             if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
                             {
                                 k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
-                                if (k < 0)
+                                if (k > 0)
                                 {
                                     if (FIFO_Hist[k].Count > MaxQueueElements)
                                     {
@@ -305,7 +302,7 @@ namespace DriverCommApp.Historics
                                     }
                                     else
                                     {
-                                        FIFO_Hist[k].Enqueue(DataAreaDV);
+                                        FIFO_Hist[k].Enqueue(DataAreaDV.clone());
                                     }
                                 }
                                 else

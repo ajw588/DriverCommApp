@@ -219,10 +219,9 @@ namespace DriverCommApp.DriverComm
         /// <summary>
         /// Cloning Method
         /// Returns a new copy of himself.</summary>
-        public object clone()
+        public DataExtClass clone()
         {
             DataExtClass NewMe = new DataExtClass();
-
 
             //Clone the Data Struct Arrays
             if (this.Data.dBoolean != null)

@@ -118,7 +118,7 @@ namespace DriverCommApp
 
         ///<summary>
         /// Initialize the Drivers and Database objects.
-        /// </summary>
+        ///</summary>
         public int Initialize()
         {
             int i, RTime;
@@ -177,6 +177,9 @@ namespace DriverCommApp
                             if (theDriver[i].thisDriverConf.Enable) return -5;
                         }
 
+                        //Update the Status Collection.
+                        StatusColl.AddSummary(theDriver[i].Status.GetSummary());
+
                     } // END FOR Drivers
 
                     //Initialize the Database
@@ -220,7 +223,6 @@ namespace DriverCommApp
 
             }// If Config isInitialized and No WorkersRunning
 
-
             return 0;
         } // END Initialize Function.
 
@@ -234,6 +236,13 @@ namespace DriverCommApp
 
             if (isInitialized && (!WorkersRuning))
             {
+
+                if (EnHistorics)
+                {
+                    theHistorics.CleanHist();
+                    theHistorics.StartWork();
+                }
+
                 //Create the Background workers.
                 WorkersCollection = new BackgroundWorker[NumDrivers];
 
@@ -289,6 +298,19 @@ namespace DriverCommApp
             }
             return -1;
         } //END Stop Workers Function.
+
+        ///<summary>
+        /// Update the Status Collection.
+        /// </summary>
+        public void UpdStatus()
+        {
+            StatusColl.AddSummary(Status.GetSummary());
+
+            StatusColl.AddSummary(theDatabase.Status.GetSummary());
+
+            if (EnHistorics)
+            StatusColl.AddSummary(theHistorics.Status.GetSummary());
+        }
 
         ///<summary>
         /// Stop all the Workers, and
@@ -362,10 +384,7 @@ namespace DriverCommApp
                 }
                 else
                 {
-
-
                     //Do Operations.
-
                     if (!DoCycle(thisDriver))
                     {
                         //Fatal Error, Cancel the Worker
@@ -375,8 +394,6 @@ namespace DriverCommApp
                     //Sleep for the rest of the time cicle.
                     finalTime = DateTime.Now;
                     msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
-                    ToReport.LoopTime = msCycle;
-                    ToReport.DriverID = thisDriver.thisDriverConf.ID;
 
                     if (msCycle < thisDriver.thisDriverConf.CycleTime)
                     {
@@ -389,12 +406,15 @@ namespace DriverCommApp
                         //Cicle is taking too much time!!!
                         //Only report if its 15% higger than limit.
                         if (msCycle > (thisDriver.thisDriverConf.CycleTime * 1.15))
-                            ToReport.StatMsg = "Main Cycle taking too long, " + msCycle.ToString() +
-                                " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms";
+                        thisDriver.Status.NewStat(StatT.Warning, "Main Cycle taking too long, " + msCycle.ToString() +
+                                " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms");
                     }
 
-                    worker.ReportProgress(i, ToReport);
+                    //Get the Driver Status Report.
+                    ToReport = thisDriver.Status.GetSummary();
+                    ToReport.TimeLoop = msCycle;
 
+                    worker.ReportProgress(i, ToReport);
                 }
             } //While not Cancelation
 
@@ -402,16 +422,12 @@ namespace DriverCommApp
 
         private bool DoCycle(DriverGeneric thisDriver)
         {
-            bool DVreadOK, DBreadOK;
-            int valRet, cRecon;
-            string DBmsg;
-
-            //Counter for reconnections
-            cRecon = 0;
+            bool DVreadOK, DVwriteOK, DBreadOK, DBwriteOK;
+            int cRecon;
 
             //Init Flags
-            DVreadOK = false;
-            DBreadOK = false;
+            DVreadOK = false; DVwriteOK = false;
+            DBreadOK = false; DBwriteOK = false;
 
             try
             {
@@ -432,6 +448,10 @@ namespace DriverCommApp
                     //*********************************************************
                     //Connect to the driver
                     //*********************************************************
+
+                    //Counter for reconnections
+                    cRecon = 0;
+
                     Connect:
                     if (!thisDriver.isConnected)
                     {
@@ -440,8 +460,7 @@ namespace DriverCommApp
                         {
                             //Driver Conn Error
                             if (cRecon >= 3)
-                                thisDriver.Status.NewStat(StatT.Bad, "Error Conn to Driver " +
-                                    thisDriver.thisDriverConf.ID.ToString());
+                                thisDriver.Status.NewStat(StatT.Bad, "Error Conn to Driver, 3 retries");
 
                             //Try reconnect.
                             if (cRecon < 3)
@@ -449,9 +468,7 @@ namespace DriverCommApp
                                 cRecon++;
 
                                 thisDriver.Disconnect();
-
-                                thisDriver.Status.NewStat(StatT.Bad, "Reconnecting to Driver " +
-                                    thisDriver.thisDriverConf.ID.ToString());
+                                thisDriver.Status.NewStat(StatT.Warning, "Reconnecting to Driver");
 
                                 //Wait a bit to get the driver disconnected and re-try
                                 Thread.Sleep(thisDriver.thisDriverConf.Timeout);
@@ -464,43 +481,30 @@ namespace DriverCommApp
                     //*********************************************************
                     //Read and Write data to the Driver.
                     //*********************************************************
-                    valRet = 0;
                     if (thisDriver.isConnected)
                     {
                         //Write to the Driver
                         if (thisDriver.iamWriting && DBreadOK)
                         {
-                            valRet = thisDriver.Write();
-
-                            if ((valRet < 0) && (cRecon < 3))
+                            DVwriteOK = thisDriver.Write();
+                            if ((!DVwriteOK) && (cRecon < 3))
                             {
                                 cRecon++;
                                 thisDriver.Disconnect();
                                 goto Connect;
                             }
-
                         } //Write Driver
 
                         //Read from the Driver
                         if (thisDriver.iamReading)
                         {
-                            valRet = thisDriver.Read();
-                            if (valRet < 0)
+                            DVreadOK = thisDriver.Read();
+                            if ((!DVreadOK) && (cRecon < 3))
                             {
                                 //Error Reading
-                                DVreadOK = false;
-                                StatDV.NewStat(StatT.Bad, thisDriver.thisDriverConf.ID, "Error Read Driver ");
-
-                                if (cRecon < 3)
-                                {
-                                    cRecon++;
-                                    thisDriver.Disconnect();
-                                    goto Connect;
-                                }
-                            }
-                            else
-                            {
-                                DVreadOK = true;
+                                cRecon++;
+                                thisDriver.Disconnect();
+                                goto Connect;
                             }
                         } //Read Driver
 
@@ -514,19 +518,7 @@ namespace DriverCommApp
                         lock (LockDBWrite)
                         {
                             //Write the Database
-                            valRet = theDatabase.WriteDB(thisDriver.ExtData, thisDriver.thisDriverConf.NDataAreas);
-                            if (valRet < 0)
-                            {
-                                //Bad Error, no write to backup or master.
-                                theDatabase.GetStatus(out DBmsg);
-                                StatDB.NewStat(StatT.Bad, thisDriver.thisDriverConf.ID, "Error DB Write, DV: ");
-                            }
-                            else if (valRet == 1)
-                            {
-                                //Warning Writing DB, Backup or Master is Down.
-                                theDatabase.GetStatus(out DBmsg);
-                                StatDB.NewStat(StatT.Warning, thisDriver.thisDriverConf.ID, "Warn DB Write, DV: ");
-                            }
+                            DBwriteOK = theDatabase.WriteDB(thisDriver.ExtData);
                         }
 
                         //*********************************************************
@@ -535,16 +527,8 @@ namespace DriverCommApp
                         if (EnHistorics)
                         {
                             theHistorics.NewPackage(thisDriver.ExtData);
-                            if (valRet < 0)
-                            {
-                                //Bad Error, no write to backup or master.
-                                StatDB.NewStat(StatT.Warning, thisDriver.thisDriverConf.ID, "Error Historics Write, DV: ");
-                                //theHistorics.GetStatus(out DBmsg);
-                            }
-
                         }
                     } //END If Reading
-
 
                 }// IF the Driver is Initialized
                 else
@@ -555,7 +539,7 @@ namespace DriverCommApp
             }
             catch (Exception e)
             {
-                StatDV.NewStat(StatT.Bad, thisDriver.thisDriverConf.ID, e.Message);
+                thisDriver.Status.NewStat(StatT.Bad, e.Message);
                 return false;
             }
 
@@ -600,23 +584,12 @@ namespace DriverCommApp
         private void Worker_ProgressChanged(object sender,
             ProgressChangedEventArgs e)
         {
-            WorkerProgress StatReport;
+            Stat.StatReport.ReportProgress StatReport;
 
             //Get the report data
-            StatReport = (WorkerProgress)e.UserState;
+            StatReport = (Stat.StatReport.ReportProgress) e.UserState;
 
-            if (StatReport.DVstat.StatInt != StatT.Undefined)
-                StatDVMain.NewStat(StatReport.DVstat.StatInt, StatReport.DVstat.StatMSG);
-
-            if (StatReport.DBstat.StatInt != StatT.Undefined)
-                StatDBMain.NewStat(StatReport.DBstat.StatInt, StatReport.DBstat.StatMSG);
-
-            if (StatReport.StatMsg.Length > 3)
-                StatDBMain.NewStat(StatT.Good, StatReport.DriverID, StatReport.StatMsg);
-
-            //Report the TimeLoop
-            if (StatReport.DriverID < StatDVMain.ID_Time.Length)
-                StatDVMain.ID_Time[StatReport.DriverID] = StatReport.LoopTime;
+            StatusColl.AddSummary(StatReport);
         }
 
         ///<summary>
@@ -631,6 +604,16 @@ namespace DriverCommApp
             //Destroy the Child objects
             if (theDatabase != null) theDatabase.Dispose();
             if (theHistorics != null) theHistorics.Dispose();
+
+            theDriver = null;
+            WorkersCollection = null;
+            theDatabase = null;
+            theHistorics = null;
+
+            //Status Objects
+            Status = null;
+            StatusColl = null;
+            
         }
 
     }

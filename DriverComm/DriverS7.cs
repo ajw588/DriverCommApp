@@ -72,154 +72,171 @@ namespace DriverCommApp.DriverComm.Siemens7
         /// Initialize the Driver variables and prepare for connection.</summary>
         public void Initialize()
         {
-            int i, datSize, SAddress, tAmount;
+            bool retVal = true;
+            int i, j, datSize, SAddress, tAmount;
             DAConfClass thisArea;
 
-            //Reset the Status Buffer
-            Status.ResetStat();
-
-            if ((!isInitialized) && (MasterDriverConf.Enable))
+            if (!((MasterDriverConf != null) && (Status != null)))
             {
-                try
+                retVal = false;
+                Status.NewStat(StatType.Warning, "Master Objects are Invalid.");
+            }
+
+            if (retVal)
+                if ((!isInitialized) && (MasterDriverConf.Enable))
                 {
-                    // Client creation
-                    Client = new S7Client();
-
-                    // Set the callbacks (using the static var to avoid the garbage collect)
-                    Completion = new S7Client.S7CliCompletion(CompletionProc);
-                    Client.SetAsCallBack(Completion, IntPtr.Zero);
-
-                    //Configure the timeouts
-                    //Client.SetParam(S7Consts.p_i32_PingTimeout, ref MasterDriverConf.Timeout);
-                    Client.SetParam(S7Consts.p_i32_RecvTimeout, ref MasterDriverConf.Timeout);
-                    Client.SetParam(S7Consts.p_i32_SendTimeout, ref MasterDriverConf.Timeout);
-
-                    //Generate the MultiVar Objects
-                    Reader = new S7MultiVar(Client);
-                    Writer = new S7MultiVar(Client);
-
-                    IntData = new DataExtClass.DataContainer[MasterDriverConf.NDataAreas];
-
-                    //Cicle and configure the data areas
-                    for (i = 0; i < MasterDriverConf.NDataAreas; i++)
+                    try
                     {
-                        thisArea = MasterDataAreaConf[i];
-                        SAddress = int.Parse(thisArea.StartAddress);
-                        datSize = S7Client.S7WLByte; //Always read bytes
+                        // Client creation
+                        Client = new S7Client();
 
-                        if (thisArea.Enable)
+                        // Set the callbacks (using the static var to avoid the garbage collect)
+                        Completion = new S7Client.S7CliCompletion(CompletionProc);
+                        Client.SetAsCallBack(Completion, IntPtr.Zero);
+
+                        //Configure the timeouts
+                        //Client.SetParam(S7Consts.p_i32_PingTimeout, ref MasterDriverConf.Timeout);
+                        Client.SetParam(S7Consts.p_i32_RecvTimeout, ref MasterDriverConf.Timeout);
+                        Client.SetParam(S7Consts.p_i32_SendTimeout, ref MasterDriverConf.Timeout);
+
+                        //Generate the MultiVar Objects
+                        Reader = new S7MultiVar(Client);
+                        Writer = new S7MultiVar(Client);
+
+                        IntData = new DataExtClass.DataContainer[MasterDriverConf.NDataAreas];
+
+                        j = 0; //Count the enabled Data Areas
+
+                        //Cicle and configure the data areas
+                        for (i = 0; i < MasterDriverConf.NDataAreas; i++)
                         {
+                            thisArea = MasterDataAreaConf[i];
+                            SAddress = int.Parse(thisArea.StartAddress);
+                            datSize = S7Client.S7WLByte; //Always read bytes
 
-                            switch (thisArea.dataType)
+                            if (thisArea.Enable)
                             {
-                                case DriverConfig.DatType.Bool:
-                                    tAmount = (int) Math.Ceiling((thisArea.Amount / 8.0));
-                                    IntData[i].dByte = new byte[tAmount];
 
-                                    if (!thisArea.Write)
-                                    {
-                                        //Add Reader variable areas.
-                                        Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                           SAddress, tAmount, ref IntData[i].dByte);
-                                    }
-                                    else
-                                    {
-                                        //Add Writer variable areas.
-                                        Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                            SAddress, tAmount, ref IntData[i].dByte);
-                                    }
+                                switch (thisArea.dataType)
+                                {
+                                    case DriverConfig.DatType.Bool:
+                                        tAmount = (int)Math.Ceiling((thisArea.Amount / 8.0));
+                                        IntData[i].dByte = new byte[tAmount];
 
-                                    break;
-                                case DriverConfig.DatType.Byte:
-                                    IntData[i].dByte = new byte[thisArea.Amount];
+                                        if (!thisArea.Write)
+                                        {
+                                            //Add Reader variable areas.
+                                            Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                               SAddress, tAmount, ref IntData[i].dByte);
+                                        }
+                                        else
+                                        {
+                                            //Add Writer variable areas.
+                                            Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                                SAddress, tAmount, ref IntData[i].dByte);
+                                        }
 
-                                    if (!thisArea.Write)
-                                    {
-                                        //Add Reader variable areas.
-                                        Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                           SAddress, thisArea.Amount, ref IntData[i].dByte);
-                                    }
-                                    else
-                                    {
-                                        //Add Writer variable areas.
-                                        Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                            SAddress, thisArea.Amount, ref IntData[i].dByte);
-                                    }
+                                        break;
+                                    case DriverConfig.DatType.Byte:
+                                        IntData[i].dByte = new byte[thisArea.Amount];
 
-                                    break;
-                                case DriverConfig.DatType.Word:
-                                    tAmount = (int) (thisArea.Amount * 2.0);
-                                    IntData[i].dByte = new byte[tAmount];
-                                    IntData[i].dWord = new UInt16[thisArea.Amount];
+                                        if (!thisArea.Write)
+                                        {
+                                            //Add Reader variable areas.
+                                            Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                               SAddress, thisArea.Amount, ref IntData[i].dByte);
+                                        }
+                                        else
+                                        {
+                                            //Add Writer variable areas.
+                                            Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                                SAddress, thisArea.Amount, ref IntData[i].dByte);
+                                        }
 
-                                    if (!thisArea.Write)
-                                    {
-                                        //Add Reader variable areas.
-                                        Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                           SAddress, tAmount, ref IntData[i].dByte);
-                                    }
-                                    else
-                                    {
-                                        //Add Writer variable areas.
-                                        Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                            SAddress, tAmount, ref IntData[i].dByte);
-                                    }
+                                        break;
+                                    case DriverConfig.DatType.Word:
+                                        tAmount = (int)(thisArea.Amount * 2.0);
+                                        IntData[i].dByte = new byte[tAmount];
+                                        IntData[i].dWord = new UInt16[thisArea.Amount];
 
-                                    break;
-                                case DriverConfig.DatType.DWord:
-                                    tAmount = (int)(thisArea.Amount * 4.0);
-                                    IntData[i].dByte = new byte[tAmount];
-                                    IntData[i].dDWord = new UInt32[thisArea.Amount];
+                                        if (!thisArea.Write)
+                                        {
+                                            //Add Reader variable areas.
+                                            Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                               SAddress, tAmount, ref IntData[i].dByte);
+                                        }
+                                        else
+                                        {
+                                            //Add Writer variable areas.
+                                            Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                                SAddress, tAmount, ref IntData[i].dByte);
+                                        }
 
-                                    if (!thisArea.Write)
-                                    {
-                                        //Add Reader variable areas.
-                                        Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                           SAddress, tAmount, ref IntData[i].dByte);
-                                    }
-                                    else
-                                    {
-                                        //Add Writer variable areas.
-                                        Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                            SAddress, tAmount, ref IntData[i].dByte);
-                                    }
+                                        break;
+                                    case DriverConfig.DatType.DWord:
+                                        tAmount = (int)(thisArea.Amount * 4.0);
+                                        IntData[i].dByte = new byte[tAmount];
+                                        IntData[i].dDWord = new UInt32[thisArea.Amount];
 
-                                    break;
-                                case DriverConfig.DatType.Real:
-                                    tAmount = (int)(thisArea.Amount * 4.0);
-                                    IntData[i].dByte = new byte[tAmount];
-                                    IntData[i].dReal = new float[thisArea.Amount];
+                                        if (!thisArea.Write)
+                                        {
+                                            //Add Reader variable areas.
+                                            Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                               SAddress, tAmount, ref IntData[i].dByte);
+                                        }
+                                        else
+                                        {
+                                            //Add Writer variable areas.
+                                            Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                                SAddress, tAmount, ref IntData[i].dByte);
+                                        }
 
-                                    if (!thisArea.Write)
-                                    {
-                                        //Add Reader variable areas.
-                                        Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                           SAddress, tAmount, ref IntData[i].dByte);
-                                    }
-                                    else
-                                    {
-                                        //Add Writer variable areas.
-                                        Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
-                                            SAddress, tAmount, ref IntData[i].dByte);
-                                    }
+                                        break;
+                                    case DriverConfig.DatType.Real:
+                                        tAmount = (int)(thisArea.Amount * 4.0);
+                                        IntData[i].dByte = new byte[tAmount];
+                                        IntData[i].dReal = new float[thisArea.Amount];
 
-                                    break;
-                                default:
-                                    Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
-                                    break;
-                            }
-                        }// Area Enable
-                    } // For Data Areas
+                                        if (!thisArea.Write)
+                                        {
+                                            //Add Reader variable areas.
+                                            Reader.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                               SAddress, tAmount, ref IntData[i].dByte);
+                                        }
+                                        else
+                                        {
+                                            //Add Writer variable areas.
+                                            Writer.Add(S7Client.S7AreaDB, datSize, thisArea.DBnumber,
+                                                SAddress, tAmount, ref IntData[i].dByte);
+                                        }
 
-                    isInitialized = true;
-                    Status.NewStat(StatType.Good);
-                }
-                catch (Exception e)
-                {
-                    Status.NewStat(StatType.Bad, e.Message);
-                }
+                                        break;
+                                    default:
+                                        retVal = false;
+                                        Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                                        break;
+                                }
+                                j++;
+                            }// Area Enable
+                        } // For Data Areas
 
-            } // IF not isInitialized
+                        //check there is enabled data areas.
+                        if (j == 0) retVal = false;
+                    }
+                    catch (Exception e)
+                    {
+                        retVal = false;
+                        Status.NewStat(StatType.Bad, e.Message);
+                    }
+
+                } // IF not isInitialized
+
+            if (retVal)
+                Status.NewStat(StatType.Good);
+            else
+                Status.NewStat(StatType.Bad, "Initialization Failed.");
+
+            isInitialized = retVal;
 
         } // END Function Initialized
 
@@ -227,21 +244,22 @@ namespace DriverCommApp.DriverComm.Siemens7
         /// Attemps to connect to the Server Device.</summary>
         public void Connect()
         {
-            try
-            {
-                //Reset the Status Buffer
-                Status.ResetStat();
+            if ((!isConnected) && (isInitialized))
+                try
+                {
 
-                if (!isConnected)
                     Client.ConnectTo(MasterDriverConf.Address, MasterDriverConf.Rack, MasterDriverConf.Slot);
-                isConnected = Client.Connected();
+                    isConnected = Client.Connected();
 
-                Status.NewStat(StatType.Good);
-            }
-            catch (Exception e)
-            {
-                Status.NewStat(StatType.Bad, e.Message);
-            }
+                    if (isConnected)
+                        Status.NewStat(StatType.Good);
+                    else
+                        Status.NewStat(StatType.Warning, "Connection Failed");
+                }
+                catch (Exception e)
+                {
+                    Status.NewStat(StatType.Bad, e.Message);
+                }
         } //END Connect Function
 
         /// <summary>
@@ -250,54 +268,55 @@ namespace DriverCommApp.DriverComm.Siemens7
         {
             try
             {
-                //Reset the Status Buffer
-                Status.ResetStat();
+                if (Client!=null) Client.Disconnect();
 
-                Client.Disconnect();
                 isConnected = false;
 
-                Status.NewStat(StatType.Good);
+                if (isInitialized)
+                    Status.NewStat(StatType.Good);
             }
             catch (Exception e)
             {
-                Status.NewStat(StatType.Bad, e.Message);
+                if (isInitialized)
+                    Status.NewStat(StatType.Bad, e.Message);
             }
         } //END Disconnect Function
 
         /// <summary>
         /// Read the variables from the Server Device.</summary>
-        public int Read(DataExtClass[] DataOut)
+        public bool Read(DataExtClass[] DataOut)
         {
-            int i, j, retVar, Pos, Bit;
-            retVar = -1;
-
-            //Reset the Status Buffer
-            Status.ResetStat();
+            bool retVar = false;
+            int i, j, Pos, Bit;
 
             //If is not initialized and not connected return  error
             if (!(isInitialized && isConnected))
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Reading");
-                return retVar;
+                return false;
+            }
+
+            if (DataOut == null)
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Corruption");
+                return false;
             }
 
             //If the DataOut and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataOut.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
             {
                 Status.NewStat(StatType.Bad, "Data Containers Mismatch");
-                return retVar;
+                return false;
             }
-                
 
             try
             {
-                retVar = Reader.Read();
+                if (Reader.Read() == 0) retVar = true;
 
                 // Update the DataOut with the readed values.
-
                 for (i = 0; i < MasterDriverConf.NDataAreas; i++)
                 {
-                    if (retVar == 0)
+                    if (retVar)
                     {
                         if (MasterDataAreaConf[i].Enable && (!MasterDataAreaConf[i].Write))
                         {
@@ -307,7 +326,7 @@ namespace DriverCommApp.DriverComm.Siemens7
                                 switch (MasterDataAreaConf[i].dataType)
                                 {
                                     case DriverConfig.DatType.Bool:
-                                        Pos = (int) Math.Floor(j / 8.0); if (Bit > 7) Bit = 0;
+                                        Pos = (int)Math.Floor(j / 8.0); if (Bit > 7) Bit = 0;
                                         if ((DataOut[i].Data.dBoolean.Length > j) && (IntData[i].dByte.Length > Pos))
                                             DataOut[i].Data.dBoolean[j] = S7.GetBitAt(IntData[i].dByte, Pos, Bit);
                                         Bit++;
@@ -317,17 +336,17 @@ namespace DriverCommApp.DriverComm.Siemens7
                                             DataOut[i].Data.dByte[j] = IntData[i].dByte[j];
                                         break;
                                     case DriverConfig.DatType.Word:
-                                        Pos = (int) 2*j;
+                                        Pos = (int)2 * j;
                                         if ((DataOut[i].Data.dWord.Length > j) && (IntData[i].dByte.Length > Pos))
                                             DataOut[i].Data.dWord[j] = S7.GetWordAt(IntData[i].dByte, Pos);
                                         break;
                                     case DriverConfig.DatType.DWord:
-                                        Pos = (int) 4*j;
+                                        Pos = (int)4 * j;
                                         if ((DataOut[i].Data.dDWord.Length > j) && (IntData[i].dByte.Length > Pos))
                                             DataOut[i].Data.dDWord[j] = S7.GetUDIntAt(IntData[i].dByte, Pos);
                                         break;
                                     case DriverConfig.DatType.Real:
-                                        Pos = (int) 4*j;
+                                        Pos = (int)4 * j;
                                         if ((DataOut[i].Data.dReal.Length > j) && (IntData[i].dByte.Length > Pos))
                                             DataOut[i].Data.dReal[j] = S7.GetRealAt(IntData[i].dByte, Pos);
                                         break;
@@ -340,7 +359,8 @@ namespace DriverCommApp.DriverComm.Siemens7
                         DataOut[i].NowTimeTicks = DateTime.UtcNow.Ticks;
                         Status.NewStat(StatType.Good);
                     }
-                    else { //IF Read is OK. 
+                    else
+                    { //IF Read is Not OK.
                         DataOut[i].NowTimeTicks = 0;
                         Status.NewStat(StatType.Warning, "S7 Read error..");
                     }
@@ -349,6 +369,7 @@ namespace DriverCommApp.DriverComm.Siemens7
             catch (Exception e)
             {
                 Status.NewStat(StatType.Bad, e.Message);
+                return false;
             }
 
             return retVar;
@@ -356,28 +377,30 @@ namespace DriverCommApp.DriverComm.Siemens7
 
         /// <summary>
         /// Write data to the Server Device.</summary>
-        public int Write(DataExtClass[] DataIn)
+        public bool Write(DataExtClass[] DataIn)
         {
-            int i, j, retVar, Pos, Bit;
-            retVar = -1;
-
-            //Reset the Status Buffer
-            Status.ResetStat();
+            bool retVar = false;
+            int i, j, Pos, Bit;
 
             //If is not initialized and not connected return  error
             if (!(isInitialized && isConnected))
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Writing");
-                return retVar;
+                return false;
+            }
+
+            if (DataIn == null)
+            {
+                Status.NewStat(StatType.Bad, "Data Containers Corruption");
+                return false;
             }
 
             //If the DataIn and Internal data doesnt have the correct amount of data areas return error.
             if (!((DataIn.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
             {
                 Status.NewStat(StatType.Bad, "Data Containers Mismatch");
-                return retVar;
+                return false;
             }
-                
 
             // Copy the data to the S7 library internal variables.
             for (i = 0; i < MasterDriverConf.NDataAreas; i++)
@@ -392,7 +415,7 @@ namespace DriverCommApp.DriverComm.Siemens7
                             case DriverConfig.DatType.Bool:
                                 Pos = (int)Math.Floor(j / 8.0); if (Bit > 7) Bit = 0;
                                 if ((DataIn[i].Data.dBoolean.Length > j) && (IntData[i].dByte.Length > Pos))
-                                     S7.SetBitAt(ref IntData[i].dByte,Pos,Bit,DataIn[i].Data.dBoolean[j]);
+                                    S7.SetBitAt(ref IntData[i].dByte, Pos, Bit, DataIn[i].Data.dBoolean[j]);
                                 Bit++;
                                 break;
                             case DriverConfig.DatType.Byte:
@@ -400,19 +423,22 @@ namespace DriverCommApp.DriverComm.Siemens7
                                     IntData[i].dByte[j] = DataIn[i].Data.dByte[j];
                                 break;
                             case DriverConfig.DatType.Word:
-                                Pos = (int) 2*j;
+                                Pos = (int)2 * j;
                                 if ((DataIn[i].Data.dWord.Length > j) && (IntData[i].dWord.Length > j))
                                     S7.SetWordAt(IntData[i].dByte, Pos, DataIn[i].Data.dWord[j]);
                                 break;
                             case DriverConfig.DatType.DWord:
-                                Pos = (int) 4*j;
+                                Pos = (int)4 * j;
                                 if ((DataIn[i].Data.dDWord.Length > j) && (IntData[i].dDWord.Length > j))
                                     S7.SetDWordAt(IntData[i].dByte, Pos, DataIn[i].Data.dDWord[j]);
                                 break;
                             case DriverConfig.DatType.Real:
-                                Pos = (int) 4*j;
+                                Pos = (int)4 * j;
                                 if ((DataIn[i].Data.dReal.Length > j) && (IntData[i].dReal.Length > j))
                                     S7.SetLRealAt(IntData[i].dByte, Pos, DataIn[i].Data.dReal[j]);
+                                break;
+                            default:
+                                Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
                                 break;
                         }
                     } // For Data Element
@@ -422,8 +448,16 @@ namespace DriverCommApp.DriverComm.Siemens7
             try
             {
                 //Write the data and return.
-                retVar = Writer.Write();
-                Status.NewStat(StatType.Good);
+                if (Writer.Write() == 0)
+                {
+                    retVar = true;
+                    Status.NewStat(StatType.Good);
+                }
+                else
+                {
+                    retVar = false;
+                    Status.NewStat(StatType.Warning, "S7 Write error..");
+                }
             }
             catch (Exception e)
             {
