@@ -19,31 +19,65 @@ namespace DriverCommApp.Historics
         /// Database Server Selection.</summary>
         public enum SrvSelection
         {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.None'
             None = 0,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.None'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.MasterOnly'
             MasterOnly,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.MasterOnly'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.BackupOnly'
             BackupOnly,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.BackupOnly'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.BothSrv'
             BothSrv
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvSelection.BothSrv'
         }
 
         /// <summary>
         /// Database Server Configuration Type Def.</summary>
         public struct ServerConf
         {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Enable'
             public bool Enable;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Enable'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Rate'
             public float Rate;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Rate'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.URL'
             public string URL;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.URL'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Username'
             public string Username;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Username'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Passwd'
             public string Passwd;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Passwd'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Port'
             public int Port;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Port'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Protocol'
             public DBConfig.DBServerProtocol Protocol;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Protocol'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Type'
             public DBConfig.DBServerType Type;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.Type'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.DBname'
             public string DBname; //Database name
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.DBname'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.HistLengh'
             public long HistLengh;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.ServerConf.HistLengh'
         }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.MasterSrv'
         public readonly ServerConf MasterSrv;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.MasterSrv'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.BackupSrv'
         public readonly ServerConf BackupSrv;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.BackupSrv'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvEn'
         public readonly SrvSelection SrvEn;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'HistConfClass.SrvEn'
 
         /// <summary>
         /// Main Cttor.</summary>

@@ -188,7 +188,9 @@ namespace DriverCommApp.Historics.HistMySQL
                                 default:
                                     isInitialized = false;
                                     return -2;
+#pragma warning disable CS0162 // Unreachable code detected
                                     break;
+#pragma warning restore CS0162 // Unreachable code detected
                             }// END Switch Type of Data
 
                             //End of the Command
@@ -247,27 +249,27 @@ namespace DriverCommApp.Historics.HistMySQL
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.Byte:
-                                    if ((DataAreaW.Data.dByte != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dByte != null) && (DataAreaW.Data.dByte.Length > j))
                                     { valStr = valStr + DataAreaW.Data.dByte[j].ToString() + ", "; }
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.Word:
-                                    if ((DataAreaW.Data.dWord != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dWord != null) && (DataAreaW.Data.dWord.Length > j))
                                     { valStr = valStr + DataAreaW.Data.dWord[j].ToString() + ", "; }
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.DWord:
-                                    if ((DataAreaW.Data.dDWord != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dDWord != null) && (DataAreaW.Data.dDWord.Length > j))
                                     { valStr = valStr + DataAreaW.Data.dDWord[j].ToString() + ", "; }
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.sDWord:
-                                    if ((DataAreaW.Data.dsDWord != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dsDWord != null) && (DataAreaW.Data.dsDWord.Length > j))
                                     { valStr = valStr + DataAreaW.Data.dsDWord[j].ToString() + ", "; }
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.Real:
-                                    if ((DataAreaW.Data.dReal != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dReal != null) && (DataAreaW.Data.dReal.Length > j))
                                     {
                                         if ((float.IsNaN(DataAreaW.Data.dReal[j])) || (float.IsInfinity(DataAreaW.Data.dReal[j])))
                                             DataAreaW.Data.dReal[j] = 0;
@@ -276,14 +278,16 @@ namespace DriverCommApp.Historics.HistMySQL
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 case DatType.String:
-                                    if ((DataAreaW.Data.dString != null) && (DataAreaW.Data.dBoolean.Length > j))
+                                    if ((DataAreaW.Data.dString != null) && (DataAreaW.Data.dString.Length > j))
                                     { valStr = valStr + "'" + DataAreaW.Data.dString[j] + "', "; }
                                     else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                                     break;
                                 default:
                                     Status.NewStat(StatT.Warning, "Wrong Data Type, Check Config DA.");
                                     return false;
+#pragma warning disable CS0162 // Unreachable code detected
                                     break;
+#pragma warning restore CS0162 // Unreachable code detected
                             }
 
                         } //END For Variable

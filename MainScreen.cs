@@ -17,9 +17,23 @@ namespace DriverCommApp
         /// Struct to report the Worker status to the GUI. </summary>
         public struct WorkerProgress
         {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.LoopTime'
             public string LoopTime;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.LoopTime'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBint'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVint'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HISTint'
             public int DVint, DBint, HISTint;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HISTint'
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVint'
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBint'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVstat'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBstat'
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HITSstat'
             public string DBstat, DVstat, HITSstat;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HITSstat'
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBstat'
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVstat'
         }
 
         //My Working Thread
@@ -220,8 +234,6 @@ namespace DriverCommApp
                 ToReport.LoopTime = " / " + Timmings.ToString();
             }
 
-            worker.ReportProgress(0, ToReport);
-
             //Start the work
             if (ObjMainWork.isInitialized)
             {
@@ -230,11 +242,17 @@ namespace DriverCommApp
             }
             else
             {
-                ToReport.DVstat = "Failed: check for error messages."; ToReport.DVint = 3;
-                ToReport.DBstat = "Application failed to initialize, and won't continue."; ToReport.DBint = 3;
-                ToReport.HITSstat = "Application failed to initialize, and won't continue."; ToReport.HISTint = 3;
-                UpdGUI(ToReport);
+                ToReport.DVstat += Environment.NewLine + "Failed: check for error messages.";
+                ToReport.DVint = 3;
+
+                ToReport.DBstat += Environment.NewLine +  "Application failed to initialize, and won't continue.";
+                ToReport.DBint = 3;
+
+                ToReport.HITSstat += Environment.NewLine + "Application failed to initialize, and won't continue.";
+                ToReport.HISTint = 3;
             }
+
+            worker.ReportProgress(0, ToReport);
         }
 
         /// <summary>
@@ -275,12 +293,12 @@ namespace DriverCommApp
             //If needed Call Stop All Workers Again and wait
             WaitCount = 0;
             if (ObjMainWork.WorkersRuning)
-                while (WaitCount < 100)
+                while (WaitCount < 60)
                 {
                     ObjMainWork.StopWorkers();
 
                     if (!ObjMainWork.WorkersRuning) { WaitCount = 1000; }
-                    else { Thread.Sleep(100); }
+                    else { Thread.Sleep(1000); }
 
                     WaitCount++;
                 }
@@ -302,7 +320,7 @@ namespace DriverCommApp
             WorkerProgress StatReport;
 
             //Get the report data
-            StatReport = (WorkerProgress)e.UserState;
+            StatReport = (WorkerProgress) e.UserState;
 
             //Update the GUI
             UpdGUI(StatReport);
@@ -402,7 +420,7 @@ namespace DriverCommApp
         {
             int strCopyLenght, txtMaxLenght;
             //Loop Times
-            LBL_valueloop.Text = StatReport.LoopTime.ToString() + " ms";
+            LBL_valueloop.Text = StatReport.LoopTime + " ms";
 
             txtMaxLenght = 32766;
             //Driver Status Messages
@@ -415,6 +433,9 @@ namespace DriverCommApp
             {
                 LBL_COMMStat.Text = StatReport.DVstat;
             }
+            //Scroll to end of Text
+            LBL_COMMStat.Select(LBL_COMMStat.Text.Length, 0);
+            LBL_COMMStat.ScrollToCaret();
 
             //Database Status Messages
             if (StatReport.DBstat.Length > txtMaxLenght)
@@ -426,15 +447,23 @@ namespace DriverCommApp
             {
                 LBL_DBStat.Text = StatReport.DBstat;
             }
-
             //Scroll to end of Text
-            //LBL_DBStat.Focus();
-            LBL_COMMStat.Select(LBL_COMMStat.Text.Length, 0);
-            LBL_COMMStat.ScrollToCaret();
-
-            //LBL_DBStat.Focus();
             LBL_DBStat.Select(LBL_DBStat.Text.Length, 0);
             LBL_DBStat.ScrollToCaret();
+
+            //Historics Status Messages
+            if (StatReport.HITSstat.Length > txtMaxLenght)
+            {
+                strCopyLenght = StatReport.HITSstat.Length - txtMaxLenght;
+                LBL_Hist.Text = StatReport.HITSstat.Substring(strCopyLenght);
+            }
+            else
+            {
+                LBL_Hist.Text = StatReport.HITSstat;
+            }
+            //Scroll to end of Text
+            LBL_Hist.Select(LBL_DBStat.Text.Length, 0);
+            LBL_Hist.ScrollToCaret();
 
             switch (StatReport.DVint)
             {
@@ -473,6 +502,26 @@ namespace DriverCommApp
                 case 3:
                     //Bad
                     panelDB.BackColor = Color.Red;
+                    break;
+            }
+
+            switch (StatReport.HISTint)
+            {
+                case 0:
+                    //Undefined
+                    panelHist.BackColor = Color.Black;
+                    break;
+                case 1:
+                    //Good
+                    panelHist.BackColor = Color.Green;
+                    break;
+                case 2:
+                    //Warning
+                    panelHist.BackColor = Color.Yellow;
+                    break;
+                case 3:
+                    //Bad
+                    panelHist.BackColor = Color.Red;
                     break;
             }
         }

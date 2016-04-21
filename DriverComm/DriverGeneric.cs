@@ -137,76 +137,69 @@ namespace DriverCommApp.DriverComm
                             i = 0;
                             foreach (DataAreaConf DataAreaElement in DriverConfigObj.DataAreasConf)
                             {
-                                if (DataAreaElement.ID_Driver == thisDriverConf.ID)
+                                if ((DataAreaElement.ID_Driver == thisDriverConf.ID) && (DataAreaElement.Enable))
                                 {
-                                    if (DataAreaElement.Enable)
+                                    thisAreaConf[i] = new DAConfClass(DataAreaElement.ID, DataAreaElement.ID_Driver,
+                                    DataAreaElement.Enable, DataAreaElement.Write, DataAreaElement.ToHist,
+                                    DataAreaElement.DataType, DataAreaElement.DB_Number, DataAreaElement.StartAddr,
+                                    DataAreaElement.AmountVar);
+
+                                    ExtData[i] = new DataExtClass();
+
+
+                                    //Asign the configuration section to the data area.
+                                    ExtData[i].AreaConf = thisAreaConf[i];
+
+                                    //VarNames
+                                    ExtData[i].VarNames = new string[DataAreaElement.AmountVar];
+                                    ExtData[i].FirstInit = false;
+
+                                    //Create the Data container.
+                                    if (DataAreaElement.DataType != DriverConfig.DatType.Undefined)
                                     {
-                                        thisAreaConf[i] = new DAConfClass(DataAreaElement.ID, DataAreaElement.ID_Driver,
-                                        DataAreaElement.Enable, DataAreaElement.Write, DataAreaElement.ToHist,
-                                        DataAreaElement.DataType, DataAreaElement.DB_Number, DataAreaElement.StartAddr,
-                                        DataAreaElement.AmountVar);
+                                        //Reading and Writing Flags Setup
+                                        if (!thisAreaConf[i].Write) iamReading = true;
+                                        if (thisAreaConf[i].Write) iamWriting = true;
 
-                                        ExtData[i] = new DataExtClass();
-
-
-                                        //Asign the configuration section to the data area.
-                                        ExtData[i].AreaConf = thisAreaConf[i];
-
-                                        //VarNames
-                                        ExtData[i].VarNames = new string[DataAreaElement.AmountVar];
-                                        ExtData[i].FirstInit = false;
-
-                                        //Create the Data container.
-                                        if (DataAreaElement.DataType != DriverConfig.DatType.Undefined)
+                                        switch (DataAreaElement.DataType)
                                         {
-                                            //Reading and Writing Flags Setup
-                                            if (!thisAreaConf[i].Write) iamReading = true;
-                                            if (thisAreaConf[i].Write) iamWriting = true;
-
-                                            switch (DataAreaElement.DataType)
-                                            {
-                                                case DriverConfig.DatType.Bool:
-                                                    ExtData[i].Data.dBoolean = new bool[DataAreaElement.AmountVar];
-                                                    break;
-                                                case DriverConfig.DatType.Byte:
-                                                    ExtData[i].Data.dByte = new byte[DataAreaElement.AmountVar];
-                                                    break;
-                                                case DriverConfig.DatType.Word:
-                                                    ExtData[i].Data.dWord = new UInt16[DataAreaElement.AmountVar];
-                                                    break;
-                                                case DriverConfig.DatType.DWord:
-                                                    ExtData[i].Data.dDWord = new UInt32[DataAreaElement.AmountVar];
-                                                    break;
-                                                case DriverConfig.DatType.sDWord:
-                                                    ExtData[i].Data.dsDWord = new Int32[DataAreaElement.AmountVar];
-                                                    break;
-                                                case DriverConfig.DatType.Real:
-                                                    ExtData[i].Data.dReal = new float[DataAreaElement.AmountVar];
-                                                    break;
-                                                default:
-                                                    //Disable this Driver, as it has a configuration problem.
-                                                    Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Data Area Type.");
-                                                    thisDriverConf.Enable = false;
-                                                    break;
-                                            }
+                                            case DriverConfig.DatType.Bool:
+                                                ExtData[i].Data.dBoolean = new bool[DataAreaElement.AmountVar];
+                                                break;
+                                            case DriverConfig.DatType.Byte:
+                                                ExtData[i].Data.dByte = new byte[DataAreaElement.AmountVar];
+                                                break;
+                                            case DriverConfig.DatType.Word:
+                                                ExtData[i].Data.dWord = new UInt16[DataAreaElement.AmountVar];
+                                                break;
+                                            case DriverConfig.DatType.DWord:
+                                                ExtData[i].Data.dDWord = new UInt32[DataAreaElement.AmountVar];
+                                                break;
+                                            case DriverConfig.DatType.sDWord:
+                                                ExtData[i].Data.dsDWord = new Int32[DataAreaElement.AmountVar];
+                                                break;
+                                            case DriverConfig.DatType.Real:
+                                                ExtData[i].Data.dReal = new float[DataAreaElement.AmountVar];
+                                                break;
+                                            default:
+                                                //Disable this Driver, as it has a configuration problem.
+                                                Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Data Area Type.");
+                                                thisDriverConf.Enable = false;
+                                                break;
                                         }
-                                        else
-                                        {
-                                            Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Data Area Type.");
-                                        }
-                                        i++;
-                                    }// DataArea is Enabled
-                                }
-                                else
-                                {
-                                    Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Data Area ID!=Driver ID.");
-                                } //IF DataArea ID == Driver ID   
+                                    }
+                                    else
+                                    {
+                                        Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Data Area Type.");
+                                    }
+                                    i++;
+                                }//DataArea_Driver_ID==Driver_ID .and. DataArea is Enabled
                             } //For each DataArea
-                        }
+                        }//END Data Area Count >0
                         else
                         {
                             Status.NewStat(StatType.Warning, "Wrong Driver Config Params: No Data Areas Configured.");
-                        }// Data Area Count >0
+                        }//ELSE Data Area Count >0
                     }
                     else if (thisDriverConf.Type == DriverConfig.DriverType.XWave)
                     {
@@ -297,7 +290,6 @@ namespace DriverCommApp.DriverComm
                                     DriverConfig.DatType.Real, 0, "0", ObjDriverXWave.NumVars.nReal);
                             }
                             ExtData[3].AreaConf = thisAreaConf[3];
-
                         }
                         else
                         {
@@ -326,7 +318,8 @@ namespace DriverCommApp.DriverComm
                 } //IF driver is enabled
 
             }
-            else {
+            else
+            {
                 Status.NewStat(StatType.Warning, "Wrong Driver Config Params: Wrong Driver ID.");
             }//IF Driver Number is out of bounds.
 

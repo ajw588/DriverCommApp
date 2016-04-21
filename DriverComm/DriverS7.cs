@@ -17,8 +17,6 @@ namespace DriverCommApp.DriverComm.Siemens7
         /// Driver Client to PLC.</summary>
         static S7Client Client;
         private static S7Client.S7CliCompletion Completion; // <== Static var containig the callback
-        static int AsyncResult;
-        static bool AsyncDone;
 
         /// <summary>
         /// Multivar Object to Read Data.</summary>
@@ -89,10 +87,6 @@ namespace DriverCommApp.DriverComm.Siemens7
                     {
                         // Client creation
                         Client = new S7Client();
-
-                        // Set the callbacks (using the static var to avoid the garbage collect)
-                        Completion = new S7Client.S7CliCompletion(CompletionProc);
-                        Client.SetAsCallBack(Completion, IntPtr.Zero);
 
                         //Configure the timeouts
                         //Client.SetParam(S7Consts.p_i32_PingTimeout, ref MasterDriverConf.Timeout);
@@ -464,16 +458,6 @@ namespace DriverCommApp.DriverComm.Siemens7
                 Status.NewStat(StatType.Bad, e.Message);
             }
             return retVar;
-        }
-
-        /// <summary>
-        ///  Async completion is called when an async operation was complete
-        /// For this simply text demo we only set a flag. 
-        /// Use this Function for the Read Client.</summary>
-        static void CompletionProc(IntPtr usrPtr, int opCode, int opResult)
-        {
-            AsyncResult = opResult;
-            AsyncDone = true;
         }
 
         ~DriverS7()

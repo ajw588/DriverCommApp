@@ -146,7 +146,7 @@ namespace DriverCommApp.Conf
         {
             try
             {
-                string filepath = string.Empty;
+                string filepath;
                 var ConfigFilesSection = ConfigurationManager.GetSection("ConfFiles") as
                     System.Collections.Specialized.NameValueCollection;
 

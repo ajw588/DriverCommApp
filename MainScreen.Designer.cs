@@ -42,8 +42,8 @@
             this.LBL_COMMStat = new System.Windows.Forms.TextBox();
             this.LBL_DBStat = new System.Windows.Forms.TextBox();
             this.HistoricsTitle = new System.Windows.Forms.Label();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.HistoricsTxt = new System.Windows.Forms.TextBox();
+            this.panelHist = new System.Windows.Forms.Panel();
+            this.LBL_Hist = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // LBL_TitleCOMStat
@@ -153,34 +153,34 @@
             this.HistoricsTitle.TabIndex = 0;
             this.HistoricsTitle.Text = "Historics Status";
             // 
-            // panel1
+            // panelHist
             // 
-            this.panel1.BackColor = System.Drawing.Color.Lime;
-            this.panel1.Location = new System.Drawing.Point(678, 6);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(26, 22);
-            this.panel1.TabIndex = 7;
+            this.panelHist.BackColor = System.Drawing.Color.Lime;
+            this.panelHist.Location = new System.Drawing.Point(678, 6);
+            this.panelHist.Name = "panelHist";
+            this.panelHist.Size = new System.Drawing.Size(26, 22);
+            this.panelHist.TabIndex = 7;
             // 
-            // HistoricsTxt
+            // LBL_Hist
             // 
-            this.HistoricsTxt.AcceptsReturn = true;
-            this.HistoricsTxt.Location = new System.Drawing.Point(495, 35);
-            this.HistoricsTxt.Multiline = true;
-            this.HistoricsTxt.Name = "HistoricsTxt";
-            this.HistoricsTxt.ReadOnly = true;
-            this.HistoricsTxt.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.HistoricsTxt.Size = new System.Drawing.Size(240, 135);
-            this.HistoricsTxt.TabIndex = 9;
+            this.LBL_Hist.AcceptsReturn = true;
+            this.LBL_Hist.Location = new System.Drawing.Point(495, 35);
+            this.LBL_Hist.Multiline = true;
+            this.LBL_Hist.Name = "LBL_Hist";
+            this.LBL_Hist.ReadOnly = true;
+            this.LBL_Hist.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.LBL_Hist.Size = new System.Drawing.Size(240, 135);
+            this.LBL_Hist.TabIndex = 9;
             // 
             // MainScreen
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(739, 212);
             this.Controls.Add(this.LBL_DBStat);
-            this.Controls.Add(this.HistoricsTxt);
+            this.Controls.Add(this.LBL_Hist);
             this.Controls.Add(this.LBL_COMMStat);
             this.Controls.Add(this.panelDB);
-            this.Controls.Add(this.panel1);
+            this.Controls.Add(this.panelHist);
             this.Controls.Add(this.panelDV);
             this.Controls.Add(this.LBL_TitleDBStat);
             this.Controls.Add(this.LBL_valueloop);
@@ -208,8 +208,8 @@
         private System.Windows.Forms.TextBox LBL_DBStat;
         private System.Windows.Forms.TextBox LBL_COMMStat;
         private System.Windows.Forms.Label HistoricsTitle;
-        private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.TextBox HistoricsTxt;
+        private System.Windows.Forms.Panel panelHist;
+        private System.Windows.Forms.TextBox LBL_Hist;
     }
 }
 
