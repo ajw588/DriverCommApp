@@ -391,7 +391,7 @@ namespace DriverCommApp
                         Timmings = StatColl.GetTimeLoops();
                         for (i = 1; i < Timmings.Length; i++)
                         {
-                            ToReport.LoopTime = " / " + Timmings.ToString();
+                            ToReport.LoopTime += " / " + Timmings[i].ToString();
                         }
                     }
                     else

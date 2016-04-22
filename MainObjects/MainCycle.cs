@@ -391,8 +391,9 @@ namespace DriverCommApp
                if (msCycle < thisDriver.thisDriverConf.CycleTime)
                {
                   msLeft = (int)(thisDriver.thisDriverConf.CycleTime - msCycle);
-                  Thread.Sleep(msLeft);
+                  if (msLeft>20) Thread.Sleep(msLeft);
                   ToReport.StatMsg = "";
+                  thisDriver.Status.NewStat(StatT.Good, msCycle);
                }
                else
                {
@@ -400,7 +401,7 @@ namespace DriverCommApp
                   //Only report if its 15% higger than limit.
                   if (msCycle > (thisDriver.thisDriverConf.CycleTime * 1.15))
                      thisDriver.Status.NewStat(StatT.Warning, "Main Cycle taking too long, " + msCycle.ToString() +
-                             " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms");
+                             " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms", msCycle);
                }
 
                //Get the Driver Status Report.
@@ -522,7 +523,7 @@ namespace DriverCommApp
                   //*********************************************************
                   if (EnHistorics)
                   {
-                     theHistorics.NewPackage(thisDriver.ExtData);
+                    // theHistorics.NewPackage(thisDriver.ExtData);
                   }
                } //END If Reading
 

@@ -99,7 +99,6 @@ namespace DriverCommApp.DriverComm
                         case DriverConfig.DriverType.S7_TCP:
                             thisDriverConf.ConfS7(DriverConfigObj.DriversConf[DVindex].Address,
                                 DriverConfigObj.DriversConf[DVindex].Rack, DriverConfigObj.DriversConf[DVindex].Slot);
-
                             break;
                         case DriverConfig.DriverType.ModbusTCP:
                             thisDriverConf.ConfModbusTCP(DriverConfigObj.DriversConf[DVindex].Address,

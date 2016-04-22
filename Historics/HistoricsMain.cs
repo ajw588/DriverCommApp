@@ -294,7 +294,8 @@ namespace DriverCommApp.Historics
                      if ((DataAreaDV.AreaConf.ID_Driver > 0) && (DataAreaDV.AreaConf.ID_Driver < 100))
                      {
                         k = IdtoPos[DataAreaDV.AreaConf.ID_Driver];
-                        if (k > 0)
+
+                        if (k >= 0)
                         {
                            if (FIFO_Hist[k].Count > MaxQueueElements)
                            {
@@ -307,10 +308,9 @@ namespace DriverCommApp.Historics
                         }
                         else
                         {
-                           Status.NewStat(StatT.Warning, "This DV Id doesnt belows to this Historics.");
+                           Status.NewStat(StatT.Warning, "This DV Id doesn't belows to this Historics.");
                            retVal = -5;
                         }
-
                      }
                      else
                      {
