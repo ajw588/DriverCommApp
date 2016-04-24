@@ -77,12 +77,6 @@ namespace DriverCommApp
       private int NumDvRun;
 
       /// <summary>
-      ///Parallel Block objects
-      /// </summary>
-      object LockDBRead = new object();
-      object LockDBWrite = new object();
-
-      /// <summary>
       /// Main Cycle constructor.
       /// </summary>
       public MainCycle()
@@ -326,7 +320,7 @@ namespace DriverCommApp
          {
             if (isInitialized)
             {
-               
+
             }
          }
          catch (Exception e)
@@ -391,7 +385,7 @@ namespace DriverCommApp
                if (msCycle < thisDriver.thisDriverConf.CycleTime)
                {
                   msLeft = (int)(thisDriver.thisDriverConf.CycleTime - msCycle);
-                  if (msLeft>20) Thread.Sleep(msLeft);
+                  if (msLeft > 10) Thread.Sleep(msLeft);
                   ToReport.StatMsg = "";
                   thisDriver.Status.NewStat(StatT.Good, msCycle);
                }
@@ -435,11 +429,8 @@ namespace DriverCommApp
                //*********************************************************
                if (thisDriver.iamWriting)
                {
-                  lock (LockDBRead)
-                  {
-                     //Read the Database
-                     DBreadOK = theDatabase.ReadDB(thisDriver.ExtData);
-                  } //END LockDBRead
+                  //Read the Database
+                  DBreadOK = theDatabase.ReadDB(thisDriver.ExtData);
                }
 
                //*********************************************************
@@ -512,18 +503,15 @@ namespace DriverCommApp
                //*********************************************************
                if (thisDriver.iamReading && DVreadOK)
                {
-                  lock (LockDBWrite)
-                  {
-                     //Write the Database
-                     DBwriteOK = theDatabase.WriteDB(thisDriver.ExtData);
-                  }
+                  //Write the Database
+                  DBwriteOK = theDatabase.WriteDB(thisDriver.ExtData);
 
                   //*********************************************************
                   //Write to the Historics
                   //*********************************************************
                   if (EnHistorics)
                   {
-                    // theHistorics.NewPackage(thisDriver.ExtData);
+                     theHistorics.NewPackage(thisDriver.ExtData);
                   }
                } //END If Reading
 
@@ -550,7 +538,7 @@ namespace DriverCommApp
       private void Worker_RunWorkerCompleted(
           object sender, RunWorkerCompletedEventArgs e)
       {
-         
+
 
          // First, handle the case where an exception was thrown.
          if (e.Error != null)
@@ -580,7 +568,7 @@ namespace DriverCommApp
          NumDvRun--;
 
          //The last driver to finish close the Database.
-         if (NumDvRun<=0) theDatabase.CloseALL();
+         if (NumDvRun <= 0) theDatabase.CloseALL();
 
       }
 

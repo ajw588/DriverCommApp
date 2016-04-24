@@ -53,7 +53,7 @@ namespace DriverCommApp.Stat
       //Object private vars
       List<ReportProgress> ReportCollection;
       bool LogFileEN, UniqueID, FirstWrite;
-      int ListMaxSize = 100, ListToFile = 80, ListMinSize = 30, TimmingIndex = 0;
+      int ListMaxSize = 1000, ListToFile = 800, ListMinSize = 30, TimmingIndex = 0;
       long[] TimmingsArray;
       StreamWriter outputFile;
 

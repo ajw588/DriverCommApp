@@ -53,6 +53,7 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Class Constructor.
+      /// *This method is not thread safe*
       /// <param name="DBConfigFile">Configuration Object.</param> </summary>
       public DB_Main(DBConfig DBConfigFile)
       {
@@ -94,6 +95,7 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Add a driver to be managed by this Database.
+      /// *This method is not thread safe*
       /// <param name="DriverConf">Configuration Object for driver config.</param> 
       /// <param name="DAreaConf">Configuration Object for Data Area config.</param> </summary>
       public int addDriver(DriverComm.DVConfClass DriverConf, DriverComm.DAConfClass[] DAreaConf)
@@ -135,6 +137,7 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Initialize the Database conectivity. Requires that drives are added before Initializing.
+      /// *This method is not thread safe*
       /// <param name="InitialSet">Do an initial set of the Database tables.</param>  </summary>
       public int Initialize(bool InitialSet)
       {
@@ -197,6 +200,7 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Write data into the database.
+      /// *This method is thread safe*
       /// <param name="DataExt">Data readed from devices to be writen into the database.</param> </summary>
       public bool WriteDB(DriverComm.DataExtClass[] DataExt)
       {
@@ -207,14 +211,22 @@ namespace DriverCommApp.Database
          if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.MasterOnly)
          {
             if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
-               retVal = WriteMySQL(MasterMySQL, DataExt);
+               //The MySQL Class is not thread safe.
+               lock (LockDB)
+               {
+                  retVal = WriteMySQL(MasterMySQL, DataExt);
+               }
 
             if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
          }
          else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BackupOnly)
          {
             if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
-               retVal = WriteMySQL(BackupMySQL, DataExt);
+               //The MySQL Class is not thread safe.
+               lock (LockDB)
+               {
+                  retVal = WriteMySQL(BackupMySQL, DataExt);
+               }
 
             if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
          }
@@ -225,23 +237,32 @@ namespace DriverCommApp.Database
             //Create the Tasks
             //https://msdn.microsoft.com/en-us/library/dd537609(v=vs.110).aspx
 
-            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
-               taskMaster = new Task<bool>(() => WriteMySQL(MasterMySQL, DataExt));
+            //In case the MYSQL class is beign used, this requires a lock during the execution.
+            if ((DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL) || (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL))
+               lock (LockDB)
+               {
+                  if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
+                     taskMaster = new Task<bool>(() => WriteMySQL(MasterMySQL, DataExt));
 
-            if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
-               taskBackup = new Task<bool>(() => WriteMySQL(BackupMySQL, DataExt));
+                  if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
+                     taskBackup = new Task<bool>(() => WriteMySQL(BackupMySQL, DataExt));
 
+                  if ((taskMaster != null) && (taskBackup != null))
+                  {
+                     //Start the Tasks
+                     taskMaster.Start();
+                     taskBackup.Start();
 
+                     //Now Wait for them
+                     taskMaster.Wait();
+                     taskBackup.Wait();
+
+                  }
+               }// END Lock
+
+            //Check the results
             if ((taskMaster != null) && (taskBackup != null))
-            {
-               //Start the Tasks
-               taskMaster.Start();
-               taskBackup.Start();
-
-               //Now Wait for them
-               taskMaster.Wait();
-               taskBackup.Wait();
-
+            { 
                //Check Result of Master
                if (!taskMaster.Result)
                   Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
@@ -265,7 +286,9 @@ namespace DriverCommApp.Database
       } //END Write Function
 
       /// <summary>
-      /// Write data into the database (MySQL). </summary>
+      /// Write data into the database (MySQL). 
+      /// *This method is thread safe*
+      /// </summary>
       private bool WriteMySQL(DBMySQL.DB_MySQL DBObject, DriverComm.DataExtClass[] DataWrite)
       {
          bool retVal = false;
@@ -288,6 +311,7 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Read data from the database.
+      /// *This method is thread safe*
       /// <param name="DataExt">Data readed from the database to be writen into the devices.</param>  </summary>
       public bool ReadDB(DriverComm.DataExtClass[] DataExt)
       {
@@ -300,7 +324,13 @@ namespace DriverCommApp.Database
          {
             if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
             {
-               retVal = MasterMySQL.Read(DataExt);
+               //The MySQL Class is not thread safe.
+               lock (LockDB)
+               {
+                  retVal = MasterMySQL.Read(DataExt);
+               }
+
+               Status.AddSummary(MasterMySQL.Status.GetSummary());
 
                if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
             }
@@ -311,7 +341,12 @@ namespace DriverCommApp.Database
          {
             if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
             {
-               retVal = BackupMySQL.Read(DataExt);
+               //The MySQL Class is not thread safe.
+               lock (LockDB)
+               {
+                  retVal = BackupMySQL.Read(DataExt);
+               }
+               Status.AddSummary(BackupMySQL.Status.GetSummary());
 
                if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
             }
@@ -319,47 +354,6 @@ namespace DriverCommApp.Database
 
          return retVal;
       } //END Read Function
-
-      /*
-       //*****************************************************
-       // Deprecather Method, Now just access the Status Object.
-       //*******************************************************
-
-      /// <summary>
-      /// Get Status of the Database conectivity.
-      /// <param name="messages">Data readed from the database to be writen into the devices.</param> </summary>
-      public int GetStatus(out string messages)
-      {
-          int retVal;
-          retVal = 0;
-          messages = String.Empty;
-
-          if (!MasterWStat.StatAllOK && DatabaseConf.MasterServer.Enable) retVal += -20;
-          if (!BackupWStat.StatAllOK && DatabaseConf.BackupServer.Enable) retVal += -30;
-
-          if (!MasterRStat.StatAllOK && DatabaseConf.BackupServer.Enable)
-          {
-              retVal += -200;
-              if (!BackupRStat.StatAllOK && DatabaseConf.BackupServer.Enable) retVal += -300;
-          }
-
-
-          // Message ConCat
-          if (DatabaseConf.MasterServer.Enable)
-          {
-              messages = messages + "MasterDBWrite= " + MasterWStat.statusMSG + "; MasterDBRead= " + MasterRStat.statusMSG + " ;";
-          }
-          else
-          {
-              messages = " No Master DB enabled; ";
-          }
-          if (DatabaseConf.BackupServer.Enable)
-          {
-              messages = "BackupDBWrite= " + BackupWStat.statusMSG + "; BackupDBRead= " + BackupRStat.statusMSG + " ;";
-          }
-
-          return retVal;
-      } */
 
 
       /// <summary>
