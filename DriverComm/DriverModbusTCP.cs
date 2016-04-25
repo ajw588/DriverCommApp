@@ -207,15 +207,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          DAConfClass thisArea;
 
          //If is not initialized and not connected return  error.
-         if (!(isInitialized && isConnected))
+         if (!(isInitialized && isConnected && (DataOut != null)))
          {
             Status.NewStat(StatType.Bad, "Not Ready for Reading");
-            return false;
-         }
-
-         if (DataOut == null)
-         {
-            Status.NewStat(StatType.Bad, "Data Containers Corruption");
             return false;
          }
 
@@ -278,20 +272,15 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                      switch (thisArea.dataType)
                      {
                         case DriverConfig.DatType.Bool:
-                           if ((DataOut[i].Data.dBoolean != null) && (DataOut[i].Data.dBoolean.Length > j))
-                           {
-                              boolReg = Math.DivRem(j, 16, out boolBit);
-                              var b = new BitArray(new int[] { IntData[i].dInt[boolReg] }); ;
-                              DataOut[i].Data.dBoolean[j] = b[boolBit];
-                           }
+                           boolReg = Math.DivRem(j, 16, out boolBit);
+                           var b = new BitArray(new int[] { IntData[i].dInt[boolReg] }); ;
+                           DataOut[i].Data.dBoolean[j] = b[boolBit];
                            break;
                         case DriverConfig.DatType.Byte:
-                           if ((DataOut[i].Data.dByte != null) && (DataOut[i].Data.dByte.Length > j))
-                              DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & MaskByte);
+                           DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & MaskByte);
                            break;
                         case DriverConfig.DatType.Word:
-                           if ((DataOut[i].Data.dWord != null) && (DataOut[i].Data.dWord.Length > j))
-                              DataOut[i].Data.dWord[j] = (ushort)(IntData[i].dInt[j] & MaskWord);
+                           DataOut[i].Data.dWord[j] = (ushort)(IntData[i].dInt[j] & MaskWord);
                            break;
                         case DriverConfig.DatType.DWord:
                         case DriverConfig.DatType.Real:
@@ -311,14 +300,12 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                            //Store the value in the DataOut.
                            if (thisArea.dataType == DriverConfig.DatType.DWord)
                            {
-                              if ((DataOut[i].Data.dDWord != null) && (DataOut[i].Data.dDWord.Length > j))
-                                 DataOut[i].Data.dDWord[j] = (highWord | lowWord);
+                              DataOut[i].Data.dDWord[j] = (highWord | lowWord);
                            }
                            else
                            {
                               //Float point decimal.
-                              if ((DataOut[i].Data.dReal != null) && (DataOut[i].Data.dReal.Length > j))
-                                 DataOut[i].Data.dReal[j] = (highWord | lowWord) / ((float)1000.0);
+                              DataOut[i].Data.dReal[j] = (highWord | lowWord) / ((float)1000.0);
                            }
 
                            jj = jj + 2;
@@ -356,15 +343,9 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          var BitInt = new int[1];
 
          //If is not initialized and not connected return  error
-         if (!(isInitialized && isConnected))
+         if (!(isInitialized && isConnected && (DataIn != null)))
          {
             Status.NewStat(StatType.Bad, "Not Ready for Writing");
-            return false;
-         }
-
-         if (DataIn == null)
-         {
-            Status.NewStat(StatType.Bad, "Data Containers Corruption");
             return false;
          }
 
@@ -399,63 +380,57 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                         }
                         break;
                      case DriverConfig.DatType.Byte:
-                        if ((IntData[i].dInt.Length > j) && (DataIn[i].Data.dByte.Length > j))
-                           IntData[i].dInt[j] = DataIn[i].Data.dByte[j];
+                        IntData[i].dInt[j] = DataIn[i].Data.dByte[j];
                         break;
                      case DriverConfig.DatType.Word:
-                        if ((IntData[i].dInt.Length > j) && (DataIn[i].Data.dWord.Length > j))
-                           IntData[i].dInt[j] = DataIn[i].Data.dWord[j];
+                        IntData[i].dInt[j] = DataIn[i].Data.dWord[j];
                         break;
                      case DriverConfig.DatType.DWord:
-                        if ((IntData[i].dInt.Length > (jj + 1)) && (DataIn[i].Data.dWord.Length > j))
+                        //Endianess of the double word.
+                        if (RegOrder == ModbusClient.RegisterOrder.HighLow)
                         {
-                           //Endianess of the double word.
-                           if (RegOrder == ModbusClient.RegisterOrder.HighLow)
-                           {
-                              IntData[i].dInt[jj] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
-                              IntData[i].dInt[(jj + 1)] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
-                           }
-                           else
-                           {
-                              IntData[i].dInt[jj] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
-                              IntData[i].dInt[(jj + 1)] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
-                           }
-
-                           jj = jj + 2;
+                           IntData[i].dInt[jj] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
+                           IntData[i].dInt[(jj + 1)] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
                         }
+                        else
+                        {
+                           IntData[i].dInt[jj] = (int)(DataIn[i].Data.dDWord[j] & MaskWord);
+                           IntData[i].dInt[(jj + 1)] = (int)((DataIn[i].Data.dDWord[j] & MaskHWord) >> 16);
+                        }
+
+                        jj = jj + 2;
+
                         break;
                      case DriverConfig.DatType.Real:
                         //Float point decimal.
 
-                        if ((IntData[i].dInt.Length > (jj + 1)) && (DataIn[i].Data.dReal.Length > j))
+                        //Convert the 
+                        intFloat = (uint)Math.Abs(Math.Round(DataIn[i].Data.dReal[j] * 1000.0));
+
+                        //Turn ON/OFF the sign bit.
+                        if (DataIn[i].Data.dReal[j] < 0)
                         {
-                           //Convert the 
-                           intFloat = (uint)Math.Abs(Math.Round(DataIn[i].Data.dReal[j] * 1000.0));
-
-                           //Turn ON/OFF the sign bit.
-                           if (DataIn[i].Data.dReal[j] < 0)
-                           {
-                              intFloat = intFloat | MaskNeg;
-                           }
-                           else
-                           {
-                              intFloat = intFloat & MaskiNeg;
-                           }
-
-                           //Endianess of the double word.
-                           if (RegOrder == ModbusClient.RegisterOrder.HighLow)
-                           {
-                              IntData[i].dInt[jj] = (int)((intFloat & MaskHWord) >> 16);
-                              IntData[i].dInt[(jj + 1)] = (int)(intFloat & MaskWord);
-                           }
-                           else
-                           {
-                              IntData[i].dInt[jj] = (int)(intFloat & MaskWord);
-                              IntData[i].dInt[(jj + 1)] = (int)((intFloat & MaskHWord) >> 16);
-                           }
-
-                           jj = jj + 2;
+                           intFloat = intFloat | MaskNeg;
                         }
+                        else
+                        {
+                           intFloat = intFloat & MaskiNeg;
+                        }
+
+                        //Endianess of the double word.
+                        if (RegOrder == ModbusClient.RegisterOrder.HighLow)
+                        {
+                           IntData[i].dInt[jj] = (int)((intFloat & MaskHWord) >> 16);
+                           IntData[i].dInt[(jj + 1)] = (int)(intFloat & MaskWord);
+                        }
+                        else
+                        {
+                           IntData[i].dInt[jj] = (int)(intFloat & MaskWord);
+                           IntData[i].dInt[(jj + 1)] = (int)((intFloat & MaskHWord) >> 16);
+                        }
+
+                        jj = jj + 2;
+
                         break;
                      default:
                         Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
@@ -467,7 +442,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                try
                {
                   //Write the data to the device
-                 ModTCPObj.WriteMultipleRegisters(SAddress, IntData[i].dInt);
+                  ModTCPObj.WriteMultipleRegisters(SAddress, IntData[i].dInt);
 
                   //Report Good
                   Status.NewStat(StatType.Good);

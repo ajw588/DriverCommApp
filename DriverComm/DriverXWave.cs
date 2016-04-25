@@ -195,7 +195,7 @@ namespace DriverCommApp.DriverComm.XWave
             IPEndPoint RemoteIpEndPoint = new IPEndPoint(addressIP, MasterDriverConf.portUDP);
 
             //If is not initialized and not connected return  error
-            if (!(isInitialized && isConnected))
+            if ( !(isInitialized && isConnected && (DataOut!=null)) )
             {
                 Status.NewStat(StatType.Bad, "Not Ready for Reading");
                 return false;

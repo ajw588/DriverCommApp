@@ -44,12 +44,20 @@ namespace DriverCommApp.Database
       DBMySQL.DB_MySQL BackupMySQL;
 
       /// <summary>
+      /// MySQLPool Database Master.</summary>
+      DBMySQL.DB_MySQLPool MMySQLPool;
+
+      /// <summary>
+      /// MySQLPool Database Backup.</summary>
+      DBMySQL.DB_MySQLPool BMySQLPool;
+
+      /// <summary>
       /// Flag for initialization.</summary>
       public bool isInitialized;
 
       /// <summary>
       /// Traffic light for multithreading.</summary>
-      object LockDB;
+      Object LockDB = new Object();
 
       /// <summary>
       /// Class Constructor.
@@ -167,6 +175,26 @@ namespace DriverCommApp.Database
                }
 
             } //END IF MySQL Initialization.
+
+            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {
+               MMySQLPool = new DBMySQL.DB_MySQLPool(DatabaseConf.MasterSrv, true);
+               MMySQLPool.Initialize(DriversConf, InitialSet);
+
+               Status.AddSummary(MMySQLPool.Status.GetSummary());
+
+               if (MMySQLPool.isInitialized)
+               {
+                  Status.NewStat(StatT.Good, "Master Srv Initialized.");
+                  isInitialized = true; retVal = 1;
+               }
+               else
+               {
+                  Status.NewStat(StatT.Bad, "Master Srv Init Failed.");
+                  isInitialized = false; retVal = -1;
+               }
+            } //END IF MySQLPool Initialization.
+
          } //Master Server Initialization.
 
          if (DatabaseConf.BackupSrv.Enable)
@@ -190,6 +218,26 @@ namespace DriverCommApp.Database
                   isInitialized = false; retVal = -2;
                }
             } //END IF MySQL Initialization.
+
+            if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {
+               BMySQLPool = new DBMySQL.DB_MySQLPool(DatabaseConf.MasterSrv, true);
+               BMySQLPool.Initialize(DriversConf, InitialSet);
+
+               Status.AddSummary(BMySQLPool.Status.GetSummary());
+
+               if (BMySQLPool.isInitialized)
+               {
+                  Status.NewStat(StatT.Good, "Backup Srv Initialized.");
+                  isInitialized = true; retVal = 1;
+               }
+               else
+               {
+                  Status.NewStat(StatT.Bad, "Backup Srv Init Failed.");
+                  isInitialized = false; retVal = -1;
+               }
+            } //END IF MySQLPool Initialization.
+
          } //Backup Server Initialization.
 
          //Count the enabled number of tags
@@ -217,6 +265,11 @@ namespace DriverCommApp.Database
                   retVal = WriteMySQL(MasterMySQL, DataExt);
                }
 
+            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {//The MySQLPool Class is thread safe.
+               retVal = WriteMySQLPool(MMySQLPool, DataExt);
+            }
+
             if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
          }
          else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BackupOnly)
@@ -228,6 +281,11 @@ namespace DriverCommApp.Database
                   retVal = WriteMySQL(BackupMySQL, DataExt);
                }
 
+            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {//The MySQLPool Class is thread safe.
+               retVal = WriteMySQLPool(BMySQLPool, DataExt);
+            }
+
             if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
          }
          else if (DatabaseConf.SrvEn == DBConfClass.SrvSelection.BothSrv)
@@ -238,31 +296,51 @@ namespace DriverCommApp.Database
             //https://msdn.microsoft.com/en-us/library/dd537609(v=vs.110).aspx
 
             //In case the MYSQL class is beign used, this requires a lock during the execution.
-            if ((DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL) || (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL))
+            if ((DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL) ||
+               (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL))
                lock (LockDB)
                {
                   if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                      taskMaster = new Task<bool>(() => WriteMySQL(MasterMySQL, DataExt));
+                  if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+                     taskMaster = new Task<bool>(() => WriteMySQLPool(MMySQLPool, DataExt));
 
                   if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                      taskBackup = new Task<bool>(() => WriteMySQL(BackupMySQL, DataExt));
+                  if (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQLPool)
+                     taskMaster = new Task<bool>(() => WriteMySQLPool(BMySQLPool, DataExt));
 
                   if ((taskMaster != null) && (taskBackup != null))
                   {
                      //Start the Tasks
                      taskMaster.Start();
                      taskBackup.Start();
-
                      //Now Wait for them
                      taskMaster.Wait();
                      taskBackup.Wait();
-
                   }
                }// END Lock
 
+            if ((DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool) &&
+               (DatabaseConf.BackupSrv.Type == DBConfig.DBServerType.MySQLPool))
+            {
+               taskMaster = new Task<bool>(() => WriteMySQLPool(MMySQLPool, DataExt));
+               taskBackup = new Task<bool>(() => WriteMySQLPool(BMySQLPool, DataExt));
+
+               if ((taskMaster != null) && (taskBackup != null))
+               {
+                  //Start the Tasks
+                  taskMaster.Start();
+                  taskBackup.Start();
+                  //Now Wait for them
+                  taskMaster.Wait();
+                  taskBackup.Wait();
+               }
+            }
+
             //Check the results
             if ((taskMaster != null) && (taskBackup != null))
-            { 
+            {
                //Check Result of Master
                if (!taskMaster.Result)
                   Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
@@ -287,27 +365,37 @@ namespace DriverCommApp.Database
 
       /// <summary>
       /// Write data into the database (MySQL). 
-      /// *This method is thread safe*
+      /// *This method is thread safe, but the DB_MySQL Class is NOT*
       /// </summary>
       private bool WriteMySQL(DBMySQL.DB_MySQL DBObject, DriverComm.DataExtClass[] DataWrite)
       {
          bool retVal = false;
 
-         if (Thread.CurrentThread.Name == null)
-            Thread.CurrentThread.Name = "DBWrite";
-
-         if (DBObject.isInitialized)
+         if ((DBObject.isInitialized) && (DataWrite != null))
          {
-            if (DataWrite != null)
-            {
-               retVal = DBObject.Write(DataWrite);
-               Status.AddSummary(DBObject.Status.GetSummary());
-            }
+            retVal = DBObject.Write(DataWrite);
+            Status.AddSummary(DBObject.Status.GetSummary());
          }
 
          return retVal;
       } //END WriteMySQL Function
 
+      /// <summary>
+      /// Write data into the database (MySQL) using the Pool Multithreading Objects. 
+      /// *This method is fully thread safe*
+      /// </summary>
+      private bool WriteMySQLPool(DBMySQL.DB_MySQLPool DBObject, DriverComm.DataExtClass[] DataWrite)
+      {
+         bool retVal = false;
+
+         if ((DBObject.isInitialized) && (DataWrite != null))
+         {
+            retVal = DBObject.Write(DataWrite);
+            Status.AddSummary(DBObject.Status.GetSummary());
+         }
+
+         return retVal;
+      } //END WriteMySQL Function
 
       /// <summary>
       /// Read data from the database.
@@ -329,11 +417,16 @@ namespace DriverCommApp.Database
                {
                   retVal = MasterMySQL.Read(DataExt);
                }
-
                Status.AddSummary(MasterMySQL.Status.GetSummary());
-
-               if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
             }
+
+            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {//The MySQLPool Class is thread safe.
+               retVal = MMySQLPool.Read(DataExt);
+               Status.AddSummary(MasterMySQL.Status.GetSummary());
+            }
+
+            if (!retVal) Status.NewStat(StatT.Warning, "Master Srv Read Failed.");
          } //END IF Master is Enabled
 
          //Only in case reading from Master fails, then it reads from backup.
@@ -347,9 +440,15 @@ namespace DriverCommApp.Database
                   retVal = BackupMySQL.Read(DataExt);
                }
                Status.AddSummary(BackupMySQL.Status.GetSummary());
-
-               if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
             }
+
+            if (DatabaseConf.MasterSrv.Type == DBConfig.DBServerType.MySQLPool)
+            {//The MySQLPool Class is thread safe.
+               retVal = BMySQLPool.Read(DataExt);
+               Status.AddSummary(MasterMySQL.Status.GetSummary());
+            }
+
+            if (!retVal) Status.NewStat(StatT.Warning, "Backup Srv Read Failed.");
          } //IF needs to read from Backup
 
          return retVal;

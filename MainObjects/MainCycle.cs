@@ -320,7 +320,7 @@ namespace DriverCommApp
          {
             if (isInitialized)
             {
-
+               Status.FlushLog();
             }
          }
          catch (Exception e)
@@ -341,7 +341,7 @@ namespace DriverCommApp
           DoWorkEventArgs e)
       {
          bool finishWork = false;
-         int i, msLeft;
+         int i, msLeft, cRTime;
          DateTime initialTime, finalTime;
          long msCycle;
          Stat.StatReport.ReportProgress ToReport;
@@ -357,7 +357,7 @@ namespace DriverCommApp
             Thread.CurrentThread.Name = "CycleDriver" + thisDriver.thisDriverConf.ID.ToString("00");
 
          //Initialize variables
-         msCycle = 0; i = 0;
+         msCycle = 0; i = 0; cRTime = 0;
 
          while (!(e.Cancel || finishWork))
          {
@@ -382,18 +382,19 @@ namespace DriverCommApp
                finalTime = DateTime.Now;
                msCycle = ((finalTime.Ticks - initialTime.Ticks) / TimeSpan.TicksPerMillisecond);
 
-               if (msCycle < thisDriver.thisDriverConf.CycleTime)
+               if (msCycle < (thisDriver.thisDriverConf.CycleTime*1.15) )
                {
                   msLeft = (int)(thisDriver.thisDriverConf.CycleTime - msCycle);
                   if (msLeft > 10) Thread.Sleep(msLeft);
-                  ToReport.StatMsg = "";
+                  cRTime = 0; //Reset the counter for long cycle times
                   thisDriver.Status.NewStat(StatT.Good, msCycle);
                }
                else
                {
                   //Cicle is taking too much time!!!
-                  //Only report if its 15% higger than limit.
-                  if (msCycle > (thisDriver.thisDriverConf.CycleTime * 1.15))
+                  //Only report if its more than 3 times consecutive.
+                  cRTime++; if (cRTime > 5) cRTime = 5;
+                  if (cRTime > 3)
                      thisDriver.Status.NewStat(StatT.Warning, "Main Cycle taking too long, " + msCycle.ToString() +
                              " ms, and it should be less than " + thisDriver.thisDriverConf.CycleTime.ToString() + " ms", msCycle);
                }
@@ -592,8 +593,6 @@ namespace DriverCommApp
       /// </summary>
       ~MainCycle()
       {
-         //Close All comms
-         CloseAll();
 
          //Destroy the Child objects
          if (theDatabase != null) theDatabase.Dispose();

@@ -158,23 +158,29 @@ namespace DriverCommApp.Stat
                   {
                      TimmingsArray[TimmingIndex] = Summary.TimeLoop;
                      TimmingIndex++;
-                     if (TimmingIndex > ((int)Summary.ReportID)) TimmingIndex = 0;
+                     if (TimmingIndex > ((int)IDdef.Collection)) TimmingIndex = 0;
                   }
                }
 
                cReports = ReportCollection.Count;
 
                //Remove excess.
-               if (cReports > ListMaxSize) ReportCollection.TrimExcess();
+               if (cReports > ListMaxSize)
+               {
+                  ReportCollection.TrimExcess();
+                  ReportCollection.OrderBy(Var => Var.TimeTicks);
+               }
 
                //Save the log file
                if (LogFileEN)
                {
-                  if (cReports > ListToFile) WriteLog();
+                  if (cReports > ListToFile)
+                  {
+                     WriteLog();
+                     ReportCollection.OrderBy(Var => Var.TimeTicks);
+                  }
                }
-
-               ReportCollection.OrderBy(Var => Var.TimeTicks);
-            }
+            }// END Lock List
       }
 
       /// <summary>
@@ -196,7 +202,6 @@ namespace DriverCommApp.Stat
          RepoOut.Stat = StatT.Undefined;
          RepoOut.StatMsg = string.Empty;
 
-
          lock (LockList)
          {
             foreach (ReportProgress Repo in ReportCollection)
@@ -210,12 +215,11 @@ namespace DriverCommApp.Stat
                }
 
             }
-
-            //Report Average of timmings.
-            TimeArray = GetTimeLoops();
-            RepoOut.TimeLoop = TimeArray[0];
-
          }// END Lock List
+
+         //Report Average of timmings.
+         TimeArray = GetTimeLoops();
+         RepoOut.TimeLoop = TimeArray[0];
 
          return RepoOut;
       }
@@ -314,6 +318,7 @@ namespace DriverCommApp.Stat
          int i, cAvg; float AverageSum;
          List<long> Timings = new List<long>((int)IDdef.Collection);
          cAvg = 0; AverageSum = 0;
+
          lock (LockList)
          {
             //First Element is the Array Average.
@@ -334,7 +339,8 @@ namespace DriverCommApp.Stat
             {
                if (TimmingsArray[i] != 0) Timings.Add(TimmingsArray[i]);
             }
-         }
+         }//LockList
+
          return Timings.ToArray();
       }
 
@@ -360,7 +366,7 @@ namespace DriverCommApp.Stat
       private void WriteLog()
       {
          //Don't lock the List, lock on the caller.
-         int i, cReports, Start, Delete;
+         int i, cReports, Start, Delete, cWrites;
          long[] TimeArray;
          string toWrite;
          DateTime timestamp;
@@ -378,6 +384,7 @@ namespace DriverCommApp.Stat
 
          //How many to delete.
          Delete = cReports - ListMinSize;
+         cWrites = 0;
 
          for (i = Start; i < cReports; i++)
          {
@@ -386,18 +393,22 @@ namespace DriverCommApp.Stat
             {
                toWrite = RepoToString(ReportCollection[i]);
                outputFile.WriteLine(toWrite);
+               cWrites++;
             }
 
          } //For Registers
 
-         //Time Loop Info
-         timestamp = new DateTime(ReportCollection.LastOrDefault().TimeTicks);
-         TimeArray = GetTimeLoops();
-         toWrite = "Average TimeLoop=  " + TimeArray[0].ToString() + " ms; " +
-                     timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
+         if (cWrites>0)
+         {
+            //Time Loop Info
+            timestamp = new DateTime(ReportCollection.LastOrDefault().TimeTicks);
+            TimeArray = GetTimeLoops();
+            toWrite = "Average TimeLoop=  " + TimeArray[0].ToString() + " ms; " +
+                        timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
 
-         outputFile.WriteLine(toWrite);
-
+            outputFile.WriteLine(toWrite);
+         }
+         
          //Remove some items.
          if (Delete > 0)
             ReportCollection.RemoveRange(0, Delete);
