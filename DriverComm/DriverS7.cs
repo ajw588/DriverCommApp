@@ -16,7 +16,6 @@ namespace DriverCommApp.DriverComm.Siemens7
       /// <summary>
       /// Driver Client to PLC.</summary>
       static S7Client Client;
-      private static S7Client.S7CliCompletion Completion; // <== Static var containig the callback
 
       /// <summary>
       /// Multivar Object to Read Data.</summary>

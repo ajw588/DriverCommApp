@@ -176,7 +176,7 @@ namespace DriverCommApp.Stat
                {
                   if (cReports > ListToFile)
                   {
-                     WriteLog();
+                     WriteLog(false);
                      ReportCollection.OrderBy(Var => Var.TimeTicks);
                   }
                }
@@ -353,7 +353,7 @@ namespace DriverCommApp.Stat
          if (LogFileEN)
             lock (LockList)
             {
-               WriteLog();
+               WriteLog(true);
                outputFile.Flush();
                //outputFile.Close();
                //LogFileEN = false;
@@ -363,7 +363,7 @@ namespace DriverCommApp.Stat
 
       /// <summary>
       /// Write Log File. </summary>
-      private void WriteLog()
+      private void WriteLog(bool flushing)
       {
          //Don't lock the List, lock on the caller.
          int i, cReports, Start, Delete, cWrites;
@@ -398,12 +398,12 @@ namespace DriverCommApp.Stat
 
          } //For Registers
 
-         if (cWrites>0)
+         if ( (cWrites>0) || (flushing))
          {
             //Time Loop Info
             timestamp = new DateTime(ReportCollection.LastOrDefault().TimeTicks);
             TimeArray = GetTimeLoops();
-            toWrite = "Average TimeLoop=  " + TimeArray[0].ToString() + " ms; " +
+            toWrite = "Avg TimeLoop=  " + TimeArray[0].ToString() + " ms; " +
                         timestamp.ToShortDateString() + "_" + timestamp.ToShortTimeString();
 
             outputFile.WriteLine(toWrite);

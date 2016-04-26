@@ -78,25 +78,36 @@ namespace DriverCommApp.Historics.HistMySQL
                 "UID=" + SrvConf.Username + ";" + "PASSWORD=" + SrvConf.Passwd + ";" +
                 "ConnectionTimeout=5; DefaultCommandTimeout=5;Keepalive=3" + ";";
 
-            conn = new MySqlConnection(myConnectionString);
-
-            if (Connect())
+            try
             {
-               Disconnect();
-
-               //Database tables initialization.
-               if (InitialSet) retVal = InitDB();
-
-               if (retVal == 0)
+               conn = new MySqlConnection(myConnectionString);
+               if (Connect())
                {
-                  isInitialized = true;
-                  Status.NewStat(StatT.Good);
+                  Disconnect();
+
+                  //Database tables initialization.
+                  if (InitialSet) retVal = InitDB();
+
+                  if (retVal == 0)
+                  {
+                     isInitialized = true;
+                     Status.NewStat(StatT.Good);
+                  }
+                  else
+                  {
+                     Status.NewStat(StatT.Bad, "Initialization Failed...");
+                  }
                }
                else
                {
-                  Status.NewStat(StatT.Bad, "Initialization Failed...");
+                  Status.NewStat(StatT.Bad, "Database Connection Failed...");
                }
             }
+            catch (Exception e)
+            {
+               Status.NewStat(StatT.Bad, e.Message);
+            }
+            
          }
          else { Status.NewStat(StatT.Bad, "Corrupted Conf Data."); }
 
@@ -215,9 +226,10 @@ namespace DriverCommApp.Historics.HistMySQL
       /// <param name="DataExt">Array Struct with the data to be written in the DB. </param> </summary>
       public bool Write(DriverComm.DataExtClass[] DataExt)
       {
-         int j, DriverID;
+         int i, j, DriverID, numDA;
          byte ValStat = 0;
-         string STRcmd, TBname, idNameSTR, valStr, colSTR;
+         string TBname, idNameSTR, valStr, colSTR;
+         string[] STRcmd;
          long NowTicks = DateTime.UtcNow.Ticks;
 
          //Reset the Status Buffer
@@ -226,58 +238,63 @@ namespace DriverCommApp.Historics.HistMySQL
          //Process each Data Area
          if (DataExt != null)
          {
-            foreach (DriverComm.DataExtClass DataAreaW in DataExt)
+            numDA = DataExt.Length;
+            STRcmd = new string[numDA];
+
+            for (i = 0; i < numDA; i++)
             {
-               if ((DataAreaW != null) && (DataAreaW.AreaConf != null))
+               STRcmd[i] = null;
+
+               if ((DataExt[i] != null) && (DataExt[i].AreaConf != null))
                {
-                  DriverID = DataAreaW.AreaConf.ID_Driver;
-                  TBname = GetHistTbName(DriverID, DataAreaW.AreaConf.ID);
+                  DriverID = DataExt[i].AreaConf.ID_Driver;
+                  TBname = GetHistTbName(DriverID, DataExt[i].AreaConf.ID);
                   colSTR = ""; valStr = "";
 
-                  for (j = 0; j < DataAreaW.AreaConf.Amount; j++)
+                  for (j = 0; j < DataExt[i].AreaConf.Amount; j++)
                   {
-                     idNameSTR = "v" + Database.DB_Functions.GetStrIdName(DriverID, DataAreaW.AreaConf.ID, j);
+                     idNameSTR = "v" + Database.DB_Functions.GetStrIdName(DriverID, DataExt[i].AreaConf.ID, j);
                      colSTR = colSTR + idNameSTR + ", ";
 
-                     switch (DataAreaW.AreaConf.dataType)
+                     switch (DataExt[i].AreaConf.dataType)
                      {
                         case DatType.Bool:
-                           if ((DataAreaW.Data.dBoolean != null) && (DataAreaW.Data.dBoolean.Length > j))
-                           { valStr = valStr + "'" + DataAreaW.Data.dBoolean[j].ToString() + "', "; }
+                           if ((DataExt[i].Data.dBoolean != null) && (DataExt[i].Data.dBoolean.Length > j))
+                           { valStr = valStr + "'" + DataExt[i].Data.dBoolean[j].ToString() + "', "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.Byte:
-                           if ((DataAreaW.Data.dByte != null) && (DataAreaW.Data.dByte.Length > j))
-                           { valStr = valStr + DataAreaW.Data.dByte[j].ToString() + ", "; }
+                           if ((DataExt[i].Data.dByte != null) && (DataExt[i].Data.dByte.Length > j))
+                           { valStr = valStr + DataExt[i].Data.dByte[j].ToString() + ", "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.Word:
-                           if ((DataAreaW.Data.dWord != null) && (DataAreaW.Data.dWord.Length > j))
-                           { valStr = valStr + DataAreaW.Data.dWord[j].ToString() + ", "; }
+                           if ((DataExt[i].Data.dWord != null) && (DataExt[i].Data.dWord.Length > j))
+                           { valStr = valStr + DataExt[i].Data.dWord[j].ToString() + ", "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.DWord:
-                           if ((DataAreaW.Data.dDWord != null) && (DataAreaW.Data.dDWord.Length > j))
-                           { valStr = valStr + DataAreaW.Data.dDWord[j].ToString() + ", "; }
+                           if ((DataExt[i].Data.dDWord != null) && (DataExt[i].Data.dDWord.Length > j))
+                           { valStr = valStr + DataExt[i].Data.dDWord[j].ToString() + ", "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.sDWord:
-                           if ((DataAreaW.Data.dsDWord != null) && (DataAreaW.Data.dsDWord.Length > j))
-                           { valStr = valStr + DataAreaW.Data.dsDWord[j].ToString() + ", "; }
+                           if ((DataExt[i].Data.dsDWord != null) && (DataExt[i].Data.dsDWord.Length > j))
+                           { valStr = valStr + DataExt[i].Data.dsDWord[j].ToString() + ", "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.Real:
-                           if ((DataAreaW.Data.dReal != null) && (DataAreaW.Data.dReal.Length > j))
+                           if ((DataExt[i].Data.dReal != null) && (DataExt[i].Data.dReal.Length > j))
                            {
-                              if ((float.IsNaN(DataAreaW.Data.dReal[j])) || (float.IsInfinity(DataAreaW.Data.dReal[j])))
-                                 DataAreaW.Data.dReal[j] = 0;
-                              valStr = valStr + DataAreaW.Data.dReal[j].ToString() + ", ";
+                              if ((float.IsNaN(DataExt[i].Data.dReal[j])) || (float.IsInfinity(DataExt[i].Data.dReal[j])))
+                                 DataExt[i].Data.dReal[j] = 0;
+                              valStr = valStr + DataExt[i].Data.dReal[j].ToString() + ", ";
                            }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         case DatType.String:
-                           if ((DataAreaW.Data.dString != null) && (DataAreaW.Data.dString.Length > j))
-                           { valStr = valStr + "'" + DataAreaW.Data.dString[j] + "', "; }
+                           if ((DataExt[i].Data.dString != null) && (DataExt[i].Data.dString.Length > j))
+                           { valStr = valStr + "'" + DataExt[i].Data.dString[j] + "', "; }
                            else { Status.NewStat(StatT.Warning, "Writing Data Corrupted."); return false; }
                            break;
                         default:
@@ -288,11 +305,11 @@ namespace DriverCommApp.Historics.HistMySQL
 
                   } //END For Variable
 
-                  STRcmd = "INSERT LOW_PRIORITY INTO " + TBname + " (" + colSTR + " ValStat, TimeTicks) VALUES (" +
+                  STRcmd[i] = "INSERT LOW_PRIORITY INTO " + TBname + " (" + colSTR + " ValStat, TimeTicks) VALUES (" +
                       valStr + ValStat.ToString() + ", " + NowTicks.ToString() + ");";
 
                   //Send the query
-                  if (!SQLcmdSingle(STRcmd))
+                  if (!SQLcmdMult(STRcmd, numDA))
                   {
                      Status.NewStat(StatT.Warning, "Writing Data Failed.");
                      return false;
@@ -409,15 +426,21 @@ namespace DriverCommApp.Historics.HistMySQL
          //open connection
          if (this.Connect() == true)
          {
+
+            //create command and assign the query and connection from the constructor
+            MySqlCommand cmd = new MySqlCommand("", conn);
+
             if (querys.Length >= numQuerys)
                for (i = 0; i < numQuerys; i++)
                {
                   if (querys[i] != null)
                   {
-                     //create command and assign the query and connection from the constructor
-                     MySqlCommand cmd = new MySqlCommand(querys[i], conn);
                      try
-                     { //Execute command
+                     {
+                        //Add the Query
+                        cmd.CommandText = querys[i];
+
+                        //Execute command
                         cmd.ExecuteNonQuery();
                      }
                      catch (Exception e)
@@ -425,11 +448,11 @@ namespace DriverCommApp.Historics.HistMySQL
                         Status.NewStat(StatT.Bad, e.Message);
                         return false;
                      }
-                     cmd.Dispose();
                   }
                }
-            //close connection
-            //this.Disconnect();
+
+            //Dispose the CMD
+            cmd.Dispose();
 
             return true;
          }

@@ -364,6 +364,12 @@ namespace DriverCommApp
             //Get time
             initialTime = DateTime.Now;
 
+            if (finishWork)
+            {
+               //Fatal Error, Cancel the Worker
+               e.Cancel = true;
+            }
+
             if (i > 99) { i = 0; } else { i++; }
             if (worker.CancellationPending)
             {
@@ -374,8 +380,7 @@ namespace DriverCommApp
                //Do Operations.
                if (!DoCycle(thisDriver))
                {
-                  //Fatal Error, Cancel the Worker
-                  e.Cancel = true;
+                  finishWork = true;
                }
 
                //Sleep for the rest of the time cicle.
@@ -520,6 +525,15 @@ namespace DriverCommApp
             else
             {
                //Driver is not initialized, end the worker to save resources.
+               string MSG = "This Driver is not Initialized: This ends here...";
+               if (thisDriver.thisDriverConf.Enable)
+               {
+                  thisDriver.Status.NewStat(StatT.Bad, MSG);
+               }
+               else
+               {
+                  thisDriver.Status.NewStat(StatT.Good, MSG);
+               }
                return false;
             }
          }
@@ -583,6 +597,9 @@ namespace DriverCommApp
 
          //Get the report data
          StatReport = (Stat.StatReport.ReportProgress)e.UserState;
+
+         //If timeloop is too fast, it may had a problem.
+         if (StatReport.TimeLoop == 0) StatReport.TimeLoop = 1;
 
          StatusColl.AddSummary(StatReport);
       }

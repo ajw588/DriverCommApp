@@ -75,31 +75,38 @@ namespace DriverCommApp.Database.DBMySQL
              "Pooling=true; MinimumPoolSize=2; MaximumPoolsize=20; ConnectionReset=false;"+
              "ConnectionLifeTime=1800; CacheServerProperties=true;";
 
-         MySqlConnection conn = new MySqlConnection(myConnectionString);
-
-         conn.Open(); //Test the connection
-
-         if (conn.State == System.Data.ConnectionState.Open)
+         try
          {
-            conn.Close(); //Disconnect
-            //Database tables initialization.
-            if (InitialSet)
-               retVal = InitDB(DriversConf);
+            MySqlConnection conn = new MySqlConnection(myConnectionString);
 
-            if (retVal == 0)
+            conn.Open(); //Test the connection
+
+            if (conn.State == System.Data.ConnectionState.Open)
             {
-               isInitialized = true;
-               Status.NewStat(StatT.Good);
+               conn.Close(); //Disconnect
+                             //Database tables initialization.
+               if (InitialSet)
+                  retVal = InitDB(DriversConf);
+
+               if (retVal == 0)
+               {
+                  isInitialized = true;
+                  Status.NewStat(StatT.Good);
+               }
+               else
+               {
+                  Status.NewStat(StatT.Bad, "Initialization Failed...");
+               }
             }
             else
             {
-               Status.NewStat(StatT.Bad, "Initialization Failed...");
+               Status.NewStat(StatT.Bad, "Database Connection Failed...");
             }
-         }
-         else
+         } catch(Exception e)
          {
-            Status.NewStat(StatT.Bad, "Database Connection Failed...");
+            Status.NewStat(StatT.Bad, e.Message);
          }
+         
 
       } //END Function Initialize
 
@@ -183,37 +190,6 @@ namespace DriverCommApp.Database.DBMySQL
       } // End SQLcmdSingle
 
       /// <summary>
-      /// Send multiple command to the database.
-      /// <param name="querys">Array with the strings containing the SQL chain and data.</param>
-      /// <param name="numQuerys">Number of elements in the strings array.</param></summary>
-      private bool SQLcmdMult(string[] querys, int numQuerys)
-      {
-         int i;
-         //Default Param
-         MySqlParameter[] Param = new MySqlParameter[1];
-         Param[0] = new MySqlParameter();
-
-         if (querys.Length >= numQuerys)
-            for (i = 0; i < numQuerys; i++)
-            {
-               if (querys[i] != null)
-               {
-                  try
-                  { //Execute command
-                     if (MySqlHelper.ExecuteNonQuery(myConnectionString, querys[i], Param) < 0)
-                        return false;
-                  }
-                  catch (Exception ex)
-                  {
-                     Status.NewStat(StatT.Bad, ex.Message);
-                     return false;
-                  }
-               }//IF Query is Good
-            } //FOR Querys
-         return true;
-      }
-
-      /// <summary>
       /// Disconnect from the database. </summary>
       public bool Disconnect()
       {
@@ -238,7 +214,6 @@ namespace DriverCommApp.Database.DBMySQL
          int i, j, numDA, k;
          string STRcmd, TBname, ValSTR;
          MySqlDataReader dataReader;
-         MySqlCommand cmd;
 
          //Reset the Status Buffer
          Status.ResetStat();
@@ -354,10 +329,10 @@ namespace DriverCommApp.Database.DBMySQL
       /// </summary>
       public bool Write(DriverComm.DataExtClass[] Data)
       {
-         int i, j, k, initialLenght, numDA;
-         string STRcmd, TBname, idNameSTR, caseSTR, whereSTR, timeSTR;
+         bool isGood = false;
+         int i, j, initialLenght, numDA;
+         string STRcmd, CMDjoin, TBname, idNameSTR, caseSTR, whereSTR, timeSTR;
          DateTime DateObj;
-         string[] STRcmdM;
 
          //Reset the Status Buffer
          Status.ResetStat();
@@ -365,10 +340,8 @@ namespace DriverCommApp.Database.DBMySQL
          if (Data != null)
          {
             //Init
-            numDA = Data.Length; k = 0;
-
-            //Var for multiple writes
-            STRcmdM = new string[numDA];
+            numDA = Data.Length;
+            CMDjoin = string.Empty;
 
             for (i = 0; i < numDA; i++)
             {
@@ -418,30 +391,30 @@ namespace DriverCommApp.Database.DBMySQL
                   if (((Data.Length > i) && (Data[i].AreaConf.Enable)) && (!Data[i].AreaConf.Write))
                   {
                      caseSTR = ""; whereSTR = " WHERE IdName IN (";
-                     STRcmdM[i] = "UPDATE " + TBname + " SET ";
+                     STRcmd = "UPDATE " + TBname + " SET ";
 
                      switch (Data[i].AreaConf.dataType)
                      {
                         case DatType.Bool:
-                           STRcmdM[i] = STRcmdM[i] + "dBool = CASE IdName ";
+                           STRcmd += "dBool = CASE IdName ";
                            break;
                         case DatType.Byte:
-                           STRcmdM[i] = STRcmdM[i] + "dByte = CASE IdName ";
+                           STRcmd += "dByte = CASE IdName ";
                            break;
                         case DatType.Word:
-                           STRcmdM[i] = STRcmdM[i] + "dWord = CASE IdName ";
+                           STRcmd += "dWord = CASE IdName ";
                            break;
                         case DatType.DWord:
-                           STRcmdM[i] = STRcmdM[i] + "dDWord = CASE IdName ";
+                           STRcmd += "dDWord = CASE IdName ";
                            break;
                         case DatType.sDWord:
-                           STRcmdM[i] = STRcmdM[i] + "dsDWord = CASE IdName ";
+                           STRcmd += "dsDWord = CASE IdName ";
                            break;
                         case DatType.Real:
-                           STRcmdM[i] = STRcmdM[i] + "dReal = CASE IdName ";
+                           STRcmd += "dReal = CASE IdName ";
                            break;
                         case DatType.String:
-                           STRcmdM[i] = STRcmdM[i] + "dBool = CASE IdName ";
+                           STRcmd += "dBool = CASE IdName ";
                            break;
                         default:
                            Status.NewStat(StatT.Warning, "Wrong Data Type, Check Config DA.");
@@ -512,21 +485,30 @@ namespace DriverCommApp.Database.DBMySQL
                          DateObj.Minute.ToString("00") + ":" +
                          DateObj.Second.ToString("00");
 
-                     STRcmdM[i] = STRcmdM[i] + caseSTR + " END, TimeUpd='" + timeSTR + "'" + whereSTR + ");";
-                     k++; //index counting the good Data-Areas
+                     STRcmd += caseSTR + " END, TimeUpd='" + timeSTR + "'" + whereSTR + ");";
+
+                     CMDjoin +=" " + STRcmd;
+
+                     //In case is becoming too big
+                     if (CMDjoin.Length > 200000)
+                     {
+                        isGood=SQLcmdSingle(CMDjoin);
+                        CMDjoin = string.Empty;
+                     }
 
                   } // END IF write data readed.
                } //IF Data[i]!=null
             }// For cicle thru Data Areas
 
             //Send the query
-            if (k > 0)
+            if (CMDjoin.Length  > 3)
+               isGood=SQLcmdSingle(CMDjoin);
+
+            //Check how everything went.
+            if (isGood)
             {
-               if (SQLcmdMult(STRcmdM, numDA))
-               {
-                  Status.NewStat(StatT.Good);
-                  return true;
-               }
+               Status.NewStat(StatT.Good);
+               return true;
             }
 
          }//END If Data!=null

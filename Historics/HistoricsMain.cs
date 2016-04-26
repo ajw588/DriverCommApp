@@ -164,6 +164,7 @@ namespace DriverCommApp.Historics
                {
                   MasterMySQL = new HistMySQL.Hist_MySQL(HistConf.MasterSrv, true);
                   MasterMySQL.Initialize(InitialSet, DriversHistConf);
+                  Status.AddSummary(MasterMySQL.Status.GetSummary());
 
                   if (MasterMySQL.isInitialized)
                   {
@@ -186,6 +187,7 @@ namespace DriverCommApp.Historics
                {
                   BackupMySQL = new HistMySQL.Hist_MySQL(HistConf.BackupSrv, false);
                   BackupMySQL.Initialize(InitialSet, DriversHistConf);
+                  Status.AddSummary(BackupMySQL.Status.GetSummary());
 
                   if (BackupMySQL.isInitialized)
                   {
@@ -534,12 +536,16 @@ namespace DriverCommApp.Historics
             if (HistConf.MasterSrv.Type == DBConfig.DBServerType.MySQL)
                if (WriteMySQL(MasterMySQL, DataExt)) retVal = 0;
 
+            Status.AddSummary(MasterMySQL.Status.GetSummary());
+
             if (retVal != 0) Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
          }
          else if (HistConf.SrvEn == HistConfClass.SrvSelection.BackupOnly)
          {
             if (HistConf.BackupSrv.Type == DBConfig.DBServerType.MySQL)
                if (WriteMySQL(BackupMySQL, DataExt)) retVal = 0;
+
+            Status.AddSummary(BackupMySQL.Status.GetSummary());
 
             if (retVal != 0) Status.NewStat(StatT.Warning, "Backup Srv Write Failed.");
          }
@@ -566,6 +572,10 @@ namespace DriverCommApp.Historics
                taskMaster.Wait();
                taskBackup.Wait();
 
+               //Get the Status
+               Status.AddSummary(MasterMySQL.Status.GetSummary());
+               Status.AddSummary(BackupMySQL.Status.GetSummary());
+
                //Check Result of Master
                if (!taskMaster.Result)
                   Status.NewStat(StatT.Warning, "Master Srv Write Failed.");
@@ -579,6 +589,8 @@ namespace DriverCommApp.Historics
 
                //All ok return 0
                if ((taskMaster.Result) && (taskBackup.Result)) retVal = 0;
+
+
             }
             else
             {

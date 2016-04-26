@@ -20,6 +20,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
       {
          public int nVals;
          public int[] dInt;
+         public bool[] dBool;
       }
 
       /// <summary>
@@ -115,9 +116,22 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                         switch (thisArea.dataType)
                         {
                            case DriverConfig.DatType.Bool:
-                              boolReg = (int)Math.Ceiling(thisArea.Amount / 16.0);
-                              IntData[i].dInt = new int[boolReg];
-                              IntData[i].nVals = boolReg;
+                              if ((thisArea.DBnumber >= 1) && (thisArea.DBnumber <= 2))
+                              {
+                                 IntData[i].dBool = new bool[thisArea.Amount];
+                                 IntData[i].nVals = thisArea.Amount;
+                              }
+                              else if ((thisArea.DBnumber >= 3) && (thisArea.DBnumber <= 4))
+                              {
+                                 boolReg = (int)Math.Ceiling(thisArea.Amount / 16.0);
+                                 IntData[i].dInt = new int[boolReg];
+                                 IntData[i].nVals = boolReg;
+                              }
+                              else
+                              {  //Invalid Conf
+                                 IntData[i].dInt = null;
+                                 IntData[i].nVals = -1;
+                              }
                               break;
                            case DriverConfig.DatType.Byte:
                            case DriverConfig.DatType.Word:
@@ -234,25 +248,64 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                   switch (thisArea.dataType)
                   {
                      case DriverConfig.DatType.Bool:
-                        boolReg = (int)Math.Ceiling(thisArea.Amount / 16.0);
-                        IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, boolReg);
-                        //Check read complete set of data
-                        if (IntData[i].dInt.Length == boolReg) retVar = true;
+                        if ((thisArea.DBnumber >= 1) && (thisArea.DBnumber <= 2))
+                        {
+                           if (thisArea.DBnumber == 1)
+                              IntData[i].dBool = ModTCPObj.ReadCoils(SAddress, thisArea.Amount);
+                           if (thisArea.DBnumber == 2)
+                              IntData[i].dBool = ModTCPObj.ReadDiscreteInputs(SAddress, thisArea.Amount);
+                           if (IntData[i].dBool.Length == thisArea.Amount) retVar = true;
+                        }
+                        else if ((thisArea.DBnumber >= 3) && (thisArea.DBnumber <= 4))
+                        {
+                           boolReg = (int)Math.Ceiling(thisArea.Amount / 16.0);
+                           if (thisArea.DBnumber == 3) IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, boolReg);
+                           if (thisArea.DBnumber == 4) IntData[i].dInt = ModTCPObj.ReadInputRegisters(SAddress, boolReg);
+                           //Check read complete set of data
+                           if (IntData[i].dInt.Length == boolReg) retVar = true;
+                        }
+                        else
+                        {  //Invalid Conf
+                           retVar = false;
+                           Status.NewStat(StatType.Warning, "Wrong FC for Read, Check Config.");
+                        }
                         break;
                      case DriverConfig.DatType.Byte:
                      case DriverConfig.DatType.Word:
-                        IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, thisArea.Amount);
-                        //Check read complete set of data
-                        if (IntData[i].dInt.Length == thisArea.Amount) retVar = true;
+                        if ((thisArea.DBnumber >= 3) && (thisArea.DBnumber <= 4))
+                        {
+                           if (thisArea.DBnumber == 3)
+                              IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, thisArea.Amount);
+                           if (thisArea.DBnumber == 4)
+                              IntData[i].dInt = ModTCPObj.ReadInputRegisters(SAddress, thisArea.Amount);
+                           //Check read complete set of data
+                           if (IntData[i].dInt.Length == thisArea.Amount) retVar = true;
+                        }
+                        else
+                        {//Invalid Conf
+                           retVar = false;
+                           Status.NewStat(StatType.Warning, "Wrong FC for Read, Check Config.");
+                        }
                         break;
                      case DriverConfig.DatType.DWord:
                      case DriverConfig.DatType.Real:
-                        IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, (2 * thisArea.Amount));
-                        //Check read complete set of data
-                        if (IntData[i].dInt.Length == (2 * thisArea.Amount)) retVar = true;
+                        if ((thisArea.DBnumber >= 3) && (thisArea.DBnumber <= 4))
+                        {
+                           if (thisArea.DBnumber == 3)
+                              IntData[i].dInt = ModTCPObj.ReadHoldingRegisters(SAddress, (2 * thisArea.Amount));
+                           if (thisArea.DBnumber == 4)
+                              IntData[i].dInt = ModTCPObj.ReadInputRegisters(SAddress, (2 * thisArea.Amount));
+                           if (IntData[i].dInt.Length == (2 * thisArea.Amount)) retVar = true;
+                        }
+                        else
+                        {//Invalid Conf
+                           retVar = false;
+                           Status.NewStat(StatType.Warning, "Wrong FC for Read, Check Config.");
+                        }
                         break;
                      default:
                         Status.NewStat(StatType.Warning, "Wrong DataArea Type, Check Config.");
+                        retVar = false;
                         break;
                   }
                }
@@ -272,9 +325,16 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                      switch (thisArea.dataType)
                      {
                         case DriverConfig.DatType.Bool:
-                           boolReg = Math.DivRem(j, 16, out boolBit);
-                           var b = new BitArray(new int[] { IntData[i].dInt[boolReg] }); ;
-                           DataOut[i].Data.dBoolean[j] = b[boolBit];
+                           if ((thisArea.DBnumber >= 1) && (thisArea.DBnumber <= 2))
+                           {
+                              DataOut[i].Data.dBoolean[j] = IntData[i].dBool[j];
+                           }
+                           else if ((thisArea.DBnumber >= 3) && (thisArea.DBnumber <= 4))
+                           {
+                              boolReg = Math.DivRem(j, 16, out boolBit);
+                              var b = new BitArray(new int[] { IntData[i].dInt[boolReg] }); ;
+                              DataOut[i].Data.dBoolean[j] = b[boolBit];
+                           }
                            break;
                         case DriverConfig.DatType.Byte:
                            DataOut[i].Data.dByte[j] = (byte)(IntData[i].dInt[j] & MaskByte);
@@ -325,7 +385,6 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                } //if retVar == 0. Was reading ok?
 
             }// Area Enable
-
          } //For cicle Data Areas.
 
          return retVar;
@@ -370,13 +429,23 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                   switch (thisArea.dataType)
                   {
                      case DriverConfig.DatType.Bool:
-                        boolReg = Math.DivRem(j, 16, out boolBit);
-                        if ((IntData[i].dInt.Length > boolReg) && (DataIn[i].Data.dBoolean.Length > j))
+                        if (thisArea.DBnumber == 1)
                         {
-                           if (boolBit == 0) { bitArray.SetAll(false); BitInt[0] = 0; }
-                           bitArray.Set(boolBit, DataIn[i].Data.dBoolean[j]);
-                           bitArray.CopyTo(BitInt, 0);
-                           IntData[i].dInt[boolReg] = BitInt[0];
+                           if ((IntData[i].dBool.Length > j) && (DataIn[i].Data.dBoolean.Length > j))
+                           {
+                              IntData[i].dBool[j] = DataIn[i].Data.dBoolean[j];
+                           }
+                        }
+                        else if (thisArea.DBnumber == 3)
+                        {
+                           boolReg = Math.DivRem(j, 16, out boolBit);
+                           if ((IntData[i].dInt.Length > boolReg) && (DataIn[i].Data.dBoolean.Length > j))
+                           {
+                              if (boolBit == 0) { bitArray.SetAll(false); BitInt[0] = 0; }
+                              bitArray.Set(boolBit, DataIn[i].Data.dBoolean[j]);
+                              bitArray.CopyTo(BitInt, 0);
+                              IntData[i].dInt[boolReg] = BitInt[0];
+                           }
                         }
                         break;
                      case DriverConfig.DatType.Byte:
@@ -438,15 +507,27 @@ namespace DriverCommApp.DriverComm.ModbusTCP
                   }
                } // For j
 
-
                try
                {
                   //Write the data to the device
-                  ModTCPObj.WriteMultipleRegisters(SAddress, IntData[i].dInt);
+                  if ((thisArea.DBnumber == 1) && (thisArea.dataType == DriverConfig.DatType.Bool))
+                  {
+                     ModTCPObj.WriteMultipleCoils(SAddress, IntData[i].dBool);
+                     retVar = true;
+                  }
+                  else if (thisArea.DBnumber == 3)
+                  {
+                     ModTCPObj.WriteMultipleRegisters(SAddress, IntData[i].dInt);
+                     retVar = true;
+                  }
+                  else
+                  {
+                     retVar = false;
+                     Status.NewStat(StatType.Warning, "Wrong FC for Write, Check Config.");
+                  }
 
                   //Report Good
-                  Status.NewStat(StatType.Good);
-                  retVar = true;
+                  if (retVar) Status.NewStat(StatType.Good);
                }
                catch (Exception e)
                {

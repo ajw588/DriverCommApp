@@ -17,23 +17,9 @@ namespace DriverCommApp
       /// Struct to report the Worker status to the GUI. </summary>
       public struct WorkerProgress
       {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.LoopTime'
          public string LoopTime;
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.LoopTime'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBint'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVint'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HISTint'
          public int DVint, DBint, HISTint;
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HISTint'
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVint'
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBint'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVstat'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBstat'
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HITSstat'
          public string DBstat, DVstat, HITSstat;
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.HITSstat'
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DBstat'
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member 'MainScreen.WorkerProgress.DVstat'
       }
 
       //My Working Thread
@@ -231,7 +217,7 @@ namespace DriverCommApp
          Timmings = StatColl.GetTimeLoops();
          for (i = 1; i < Timmings.Length; i++)
          {
-            ToReport.LoopTime = " / " + Timmings.ToString();
+            ToReport.LoopTime = " / " + Timmings[i].ToString();
          }
 
          //Start the work

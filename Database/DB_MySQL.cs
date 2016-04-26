@@ -192,17 +192,20 @@ namespace DriverCommApp.Database.DBMySQL
          int i;
          //http://www.karlrixon.co.uk/writing/update-multiple-rows-with-different-values-and-a-single-sql-query/
          //open connection
+
          if (this.Connect() == true)
          {
+            //create command and assign the query and connection from the constructor
+            MySqlCommand cmd = new MySqlCommand("",conn);
+
             if (querys.Length >= numQuerys)
                for (i = 0; i < numQuerys; i++)
                {
                   if (querys[i] != null)
                   {
-                     //create command and assign the query and connection from the constructor
-                     MySqlCommand cmd = new MySqlCommand(querys[i], conn);
                      try
                      { //Execute command
+                        cmd.CommandText = querys[i];
                         cmd.ExecuteNonQuery();
                      }
                      catch (Exception ex)
@@ -210,11 +213,12 @@ namespace DriverCommApp.Database.DBMySQL
                         Status.NewStat(StatT.Bad, ex.Message);
                         return false;
                      }
-                     cmd.Dispose();
+                     
                   }
                }
-            //close connection
-            //this.Disconnect();
+
+            //Dispose the CMD
+            cmd.Dispose();
 
             return true;
          }
