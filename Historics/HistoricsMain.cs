@@ -289,7 +289,7 @@ namespace DriverCommApp.Historics
          {
             foreach (DriverComm.DataExtClass DataAreaDV in DataFromDv)
             {
-               if (DataAreaDV != null)
+               if ( (DataAreaDV != null) && (DataAreaDV.AreaConf!=null))
                {
                   if ((DataAreaDV.AreaConf.ToHistorics) && (DataAreaDV.AreaConf.Enable))
                   {
@@ -350,14 +350,13 @@ namespace DriverCommApp.Historics
       }
 
       /// <summary>
-      /// This event handler is where the actual,
-      /// potentially time-consuming work is done.
+      /// This event handler is where the actual, potentially time-consuming work is done.
       /// Database Read -> Drivers Read and Write -> Database Write.
       /// </summary>
       private void Worker_DoWork(object sender,
           DoWorkEventArgs e)
       {
-         int msLeft, cycleHist = 500;
+         int msLeft, cycleHist;
          DateTime initialTime, finalTime;
          long msCycle;
 
@@ -370,6 +369,7 @@ namespace DriverCommApp.Historics
 
          //Initialize variables
          msCycle = 0;
+         cycleHist = (int)(500 * HistConf.MasterSrv.Rate);
 
          while (!e.Cancel)
          {

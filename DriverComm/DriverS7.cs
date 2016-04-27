@@ -240,7 +240,6 @@ namespace DriverCommApp.DriverComm.Siemens7
          if ((!isConnected) && (isInitialized))
             try
             {
-
                Client.ConnectTo(MasterDriverConf.Address, MasterDriverConf.Rack, MasterDriverConf.Slot);
                isConnected = Client.Connected();
 

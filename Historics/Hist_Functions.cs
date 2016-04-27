@@ -104,8 +104,8 @@ namespace DriverCommApp.Historics
     static class Hist_Functions
     {
         /// <summary>
-        /// Number of elements in the queue, set from 20 to 200.</summary>
-        public static readonly int MaxQueueElements = 100;
+        /// Number of elements in the queue, set from 20 to 2000.</summary>
+        public static readonly int MaxQueueElements = 500;
 
         /// <summary>
         /// Generate the name of the Table for the Actual Values

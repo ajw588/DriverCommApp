@@ -69,24 +69,31 @@ namespace DriverCommApp.Database.DBMySQL
              "UID=" + DBConfig.Username + ";" + "PASSWORD=" + DBConfig.Passwd + ";" +
              "ConnectionTimeout=5; DefaultCommandTimeout=5;Keepalive=3" + ";";
 
-         conn = new MySqlConnection(myConnectionString);
-
-         if (Connect())
+         try
          {
-            Disconnect();
-            //Database tables initialization.
-            if (InitialSet)
-               retVal = InitDB(DriversConf);
+            conn = new MySqlConnection(myConnectionString);
 
-            if (retVal == 0)
+            if (Connect())
             {
-               isInitialized = true;
-               Status.NewStat(StatT.Good);
+               Disconnect();
+               //Database tables initialization.
+               if (InitialSet)
+                  retVal = InitDB(DriversConf);
+
+               if (retVal == 0)
+               {
+                  isInitialized = true;
+                  Status.NewStat(StatT.Good);
+               }
+               else
+               {
+                  Status.NewStat(StatT.Bad, "Initialization Failed...");
+               }
             }
-            else
-            {
-               Status.NewStat(StatT.Bad, "Initialization Failed...");
-            }
+         }
+         catch (Exception e)
+         {
+            Status.NewStat(StatT.Bad, e.Message);
          }
 
       } //END Function Initialize
@@ -111,7 +118,7 @@ namespace DriverCommApp.Database.DBMySQL
                 "Writable ENUM('True', 'False'), TypeVal ENUM('Bool', 'Byte', 'Word', 'DWord', 'sDWord', 'Real', 'String'), " +
                 "Description VARCHAR(100), dBool ENUM('True', 'False'), dByte TINYINT UNSIGNED, dWord SMALLINT UNSIGNED, " +
                 "dDWord INT UNSIGNED, dsDWord INT, dReal FLOAT, dString VARCHAR(255), TimeUpd DATETIME, " +
-                "PRIMARY KEY  (IdAuto), UNIQUE KEY (IdName) ) ENGINE = MEMORY;";
+                "PRIMARY KEY  (IdAuto), UNIQUE KEY (IdName) ) ROW_FORMAT=DYNAMIC ENGINE = INNODB;";
             if (!SQLcmdSingle(STRcmd)) return -1;
 
             //Create registers for each Data Area variables
@@ -155,25 +162,21 @@ namespace DriverCommApp.Database.DBMySQL
          //open connection
          if (this.Connect() == true)
          {
-            //create command and assign the query and connection from the constructor
-            MySqlCommand cmd = new MySqlCommand(query, conn);
-
             try
             {
+               //create command and assign the query and connection from the constructor
+               MySqlCommand cmd = new MySqlCommand(query, conn);
+
                //Execute command
                cmd.ExecuteNonQuery();
+
+               cmd.Dispose();
             }
             catch (Exception ex)
             {
                Status.NewStat(StatT.Bad, ex.Message);
                return false;
             }
-
-
-            //close connection
-            //this.Disconnect();
-
-            cmd.Dispose();
             return true;
          }
          else
@@ -195,31 +198,30 @@ namespace DriverCommApp.Database.DBMySQL
 
          if (this.Connect() == true)
          {
-            //create command and assign the query and connection from the constructor
-            MySqlCommand cmd = new MySqlCommand("",conn);
+            try
+            {
+               //create command and assign the query and connection from the constructor
+               MySqlCommand cmd = new MySqlCommand("", conn);
 
-            if (querys.Length >= numQuerys)
-               for (i = 0; i < numQuerys; i++)
-               {
-                  if (querys[i] != null)
+               if (querys.Length >= numQuerys)
+                  for (i = 0; i < numQuerys; i++)
                   {
-                     try
-                     { //Execute command
+                     if (querys[i] != null)
+                     {
+                        //Execute command
                         cmd.CommandText = querys[i];
                         cmd.ExecuteNonQuery();
                      }
-                     catch (Exception ex)
-                     {
-                        Status.NewStat(StatT.Bad, ex.Message);
-                        return false;
-                     }
-                     
                   }
-               }
 
-            //Dispose the CMD
-            cmd.Dispose();
-
+               //Dispose the CMD
+               cmd.Dispose();
+            }
+            catch (Exception ex)
+            {
+               Status.NewStat(StatT.Bad, ex.Message);
+               return false;
+            }
             return true;
          }
          else
@@ -236,12 +238,15 @@ namespace DriverCommApp.Database.DBMySQL
          {
             if (conn.State != System.Data.ConnectionState.Open)
             {
+               this.Disconnect();
+               System.Threading.Thread.Sleep(3000);
                conn.Open();
 
                //Check how well it went.
                if (conn.State != System.Data.ConnectionState.Open)
                {
                   Status.NewStat(StatT.Warning, "Connection Failed...");
+                  this.Disconnect();
                   return false;
                }
                else
@@ -255,15 +260,12 @@ namespace DriverCommApp.Database.DBMySQL
                return true;
             }
 
-
          }
          catch (MySqlException ex)
          {
             Status.NewStat(StatT.Bad, ex.Message);
+            return false;
          }
-
-         return false;
-
       } //END Connect function
 
       /// <summary>
@@ -358,25 +360,25 @@ namespace DriverCommApp.Database.DBMySQL
                            switch (Data[i].AreaConf.dataType)
                            {
                               case DatType.Bool:
-                                    Data[i].Data.dBoolean[j] = bool.Parse(dataReader["dBool"] + "");
+                                 Data[i].Data.dBoolean[j] = bool.Parse(dataReader["dBool"] + "");
                                  break;
                               case DatType.Byte:
-                                    Data[i].Data.dByte[j] = byte.Parse(dataReader["dByte"] + "");
+                                 Data[i].Data.dByte[j] = byte.Parse(dataReader["dByte"] + "");
                                  break;
                               case DatType.Word:
-                                    Data[i].Data.dWord[j] = ushort.Parse(dataReader["dWord"] + "");
+                                 Data[i].Data.dWord[j] = ushort.Parse(dataReader["dWord"] + "");
                                  break;
                               case DatType.DWord:
-                                    Data[i].Data.dWord[j] = ushort.Parse(dataReader["dDWord"] + "");
+                                 Data[i].Data.dWord[j] = ushort.Parse(dataReader["dDWord"] + "");
                                  break;
                               case DatType.sDWord:
-                                    Data[i].Data.dDWord[j] = uint.Parse(dataReader["dsWord"] + "");
+                                 Data[i].Data.dDWord[j] = uint.Parse(dataReader["dsWord"] + "");
                                  break;
                               case DatType.Real:
-                                    Data[i].Data.dsDWord[j] = int.Parse(dataReader["dReal"] + "");
+                                 Data[i].Data.dsDWord[j] = int.Parse(dataReader["dReal"] + "");
                                  break;
                               case DatType.String:
-                                    Data[i].Data.dString[j] = dataReader["dString"] + "";
+                                 Data[i].Data.dString[j] = dataReader["dString"] + "";
                                  break;
                               default:
                                  Status.NewStat(StatT.Warning, "Wrong Data Type, Check Config DA.");
@@ -469,7 +471,7 @@ namespace DriverCommApp.Database.DBMySQL
                         STRcmd = STRcmd + caseSTR + " END " + whereSTR + ");";
                         //Send the query
                         if (!SQLcmdSingle(STRcmd))
-                        { 
+                        {
                            Status.NewStat(StatT.Warning, "Failed to Init Symbolics/Descriptions.");
                         }
                      } //CaseSTR has data

@@ -221,7 +221,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          DAConfClass thisArea;
 
          //If is not initialized and not connected return  error.
-         if (!(isInitialized && isConnected && (DataOut != null)))
+         if (!(isInitialized && (DataOut != null)))
          {
             Status.NewStat(StatType.Bad, "Not Ready for Reading");
             return false;
@@ -231,6 +231,13 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          if (!((DataOut.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
          {
             Status.NewStat(StatType.Bad, "Data Containers Mismatch");
+            return false;
+         }
+
+         if (!(isConnected && ModTCPObj.Connected))
+         {
+            Status.NewStat(StatType.Bad, "Connection Error...");
+            this.Disconect();
             return false;
          }
 
@@ -402,7 +409,7 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          var BitInt = new int[1];
 
          //If is not initialized and not connected return  error
-         if (!(isInitialized && isConnected && (DataIn != null)))
+         if (!(isInitialized && (DataIn != null)))
          {
             Status.NewStat(StatType.Bad, "Not Ready for Writing");
             return false;
@@ -412,6 +419,13 @@ namespace DriverCommApp.DriverComm.ModbusTCP
          if (!((DataIn.Length == MasterDriverConf.NDataAreas) && (IntData.Length == MasterDriverConf.NDataAreas)))
          {
             Status.NewStat(StatType.Bad, "Data Containers Mismatch");
+            return false;
+         }
+
+         if (!(isConnected && ModTCPObj.Connected))
+         {
+            Status.NewStat(StatType.Bad, "Connection Error...");
+            this.Disconect();
             return false;
          }
 

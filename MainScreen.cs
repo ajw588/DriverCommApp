@@ -17,8 +17,14 @@ namespace DriverCommApp
       /// Struct to report the Worker status to the GUI. </summary>
       public struct WorkerProgress
       {
+         /// <summary>
+         /// Times for the threads running.</summary>
          public string LoopTime;
+         /// <summary>
+         /// Status flag for the Driver (DVint), Database (DBint), and Historics (HISTint).</summary>
          public int DVint, DBint, HISTint;
+         /// <summary>
+         /// Status Message for the Driver (DVstat), Database (DBstat), and Historics (HITSstat).</summary>
          public string DBstat, DVstat, HITSstat;
       }
 

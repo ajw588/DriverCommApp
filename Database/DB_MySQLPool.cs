@@ -130,7 +130,7 @@ namespace DriverCommApp.Database.DBMySQL
                 "Writable ENUM('True', 'False'), TypeVal ENUM('Bool', 'Byte', 'Word', 'DWord', 'sDWord', 'Real', 'String'), " +
                 "Description VARCHAR(100), dBool ENUM('True', 'False'), dByte TINYINT UNSIGNED, dWord SMALLINT UNSIGNED, " +
                 "dDWord INT UNSIGNED, dsDWord INT, dReal FLOAT, dString VARCHAR(255), TimeUpd DATETIME, " +
-                "PRIMARY KEY  (IdAuto), UNIQUE KEY (IdName) ) ENGINE = MEMORY;";
+                "PRIMARY KEY  (IdAuto), UNIQUE KEY (IdName) ) ENGINE = INNODB;";
             if (!SQLcmdSingle(STRcmd)) return -1;
 
             //Create registers for each Data Area variables
