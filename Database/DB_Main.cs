@@ -151,6 +151,7 @@ namespace DriverCommApp.Database
       {
          int retVal;
 
+         InitialSet = true; //always initialize fully
          retVal = -1;
 
          if (DatabaseConf.MasterSrv.Enable)

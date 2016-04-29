@@ -16,6 +16,8 @@ namespace DriverCommApp.Historics.HistMySQL
 {
    class Hist_MySQL : IDisposable
    {
+
+      #region Global Objects for this class
       /// <summary>
       /// Database Server Configuration.</summary>
       HistConfClass.ServerConf SrvConf;
@@ -36,6 +38,8 @@ namespace DriverCommApp.Historics.HistMySQL
       /// Initialization flag.</summary>
       public bool isInitialized;
 
+      #endregion
+      #region Class Constructors and Initialization
       /// <summary>
       /// Class Constructor.
       /// <param name="ServerConf">Server Configuration Parameters Object.</param> 
@@ -199,7 +203,9 @@ namespace DriverCommApp.Historics.HistMySQL
                         default:
                            isInitialized = false;
                            return -2;
+#pragma warning disable CS0162 // Unreachable code detected
                            break;
+#pragma warning restore CS0162 // Unreachable code detected
                      }// END Switch Type of Data
 
                      //End of the Command
@@ -221,6 +227,8 @@ namespace DriverCommApp.Historics.HistMySQL
          return retVal; ;
       } // END Init DB function
 
+      #endregion
+      #region Public Methods
       /// <summary>
       /// Write data to the database. 
       /// <param name="DataExt">Array Struct with the data to be written in the DB. </param> </summary>
@@ -302,7 +310,9 @@ namespace DriverCommApp.Historics.HistMySQL
                            default:
                               Status.NewStat(StatT.Warning, "Wrong Data Type, Check Config DA.");
                               return false;
+#pragma warning disable CS0162 // Unreachable code detected
                               break;
+#pragma warning restore CS0162 // Unreachable code detected
                         }
 
                      } //END For Variable
@@ -385,7 +395,8 @@ namespace DriverCommApp.Historics.HistMySQL
          }
          else { Status.NewStat(StatT.Bad, "Not Initialized."); return false; }
       }
-
+      #endregion
+      #region Private Methods
       /// <summary>
       /// Send a single command to the database.
       /// <param name="query">String with the SQL chain and data.</param> </summary>
@@ -549,8 +560,8 @@ namespace DriverCommApp.Historics.HistMySQL
             return false;
          }
       } //END DisConnect function
-
-      #region IDisposable Support
+      #endregion
+      #region IDisposable/Desctructor Support
       private bool disposedValue = false; // To detect redundant calls
 
       protected virtual void Dispose(bool disposing)

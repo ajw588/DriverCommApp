@@ -8,18 +8,6 @@
       <summary>Initialize the VarTree from the XML File Config</summary>
       <returns>System.Boolean</returns>
     </member>
-    <member name="M:XWaveDv.XWaveDriver.Connect(XWaveDv.XwaveConnection,XWaveDv.ConnsID@)">
-      <summary>Connect to the XWave device.</summary>
-      <returns>System.Boolean</returns>
-    </member>
-    <member name="M:XWaveDv.XWaveDriver.GetData(XWaveDv.ConnsID,System.Int32,XWaveDv.VarTree[,],XWaveDv.DataStats@,XWaveDv.VarTree[,]@)">
-      <summary>Get data from the XWave device.</summary>
-      <returns>System.Boolean</returns>
-    </member>
-    <member name="M:XWaveDv.XWaveDriver.CloseConn(XWaveDv.ConnsID)">
-      <summary>Disconnect from the XWave device.</summary>
-      <returns>Void</returns>
-    </member>
     <member name="M:XWaveDv.XWaveDriver.Unflatten(System.String,XWaveDv.VarTree[,],XWaveDv.VarTree[,]@)">
       <summary>Unflatten the character string to the tree variables.</summary>
       <returns>System.Boolean</returns>

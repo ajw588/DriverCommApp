@@ -388,6 +388,13 @@ namespace DriverCommApp.Stat
 
          for (i = Start; i < cReports; i++)
          {
+            if (i < (cReports - 1))
+               if (ReportCollection[i].StatMsg.Length == ReportCollection[(i + 1)].StatMsg.Length)
+               {
+                  //If both reports are the same
+                  i++; //Skip one report to save space on disks logs.
+               }
+
             //Save this registers to logFile.
             if (ReportCollection[i].StatMsg.Length > 3)
             {
@@ -398,7 +405,7 @@ namespace DriverCommApp.Stat
 
          } //For Registers
 
-         if ( (cWrites>0) || (flushing))
+         if ((cWrites > 0) || (flushing))
          {
             //Time Loop Info
             timestamp = new DateTime(ReportCollection.LastOrDefault().TimeTicks);
@@ -408,7 +415,7 @@ namespace DriverCommApp.Stat
 
             outputFile.WriteLine(toWrite);
          }
-         
+
          //Remove some items.
          if (Delete > 0)
             ReportCollection.RemoveRange(0, Delete);

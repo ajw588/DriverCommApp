@@ -14,6 +14,7 @@ namespace DriverCommApp.Database.DBMySQL
 {
    class DB_MySQL : IDisposable
    {
+      #region Global Objects for this class
       /// <summary>
       /// Database Server Configuration.</summary>
       DBConfClass.ServerConf DBConfig;
@@ -31,6 +32,8 @@ namespace DriverCommApp.Database.DBMySQL
       /// Initialization flag.</summary>
       public bool isInitialized;
 
+      #endregion
+      #region Class Constructor and Initialization
       /// <summary>
       /// Class Constructor.
       /// <param name="Server">Server configuration struct.</param> 
@@ -152,137 +155,8 @@ namespace DriverCommApp.Database.DBMySQL
 
          return 0;
       } // END Init DB function
-
-      /// <summary>
-      /// Send a single command to the database.
-      /// <param name="query">String with the SQL chain and data.</param> </summary>
-      private bool SQLcmdSingle(string query)
-      {
-         //http://www.codeproject.com/Articles/43438/Connect-C-to-MySQL
-         //open connection
-         if (this.Connect() == true)
-         {
-            try
-            {
-               //create command and assign the query and connection from the constructor
-               MySqlCommand cmd = new MySqlCommand(query, conn);
-
-               //Execute command
-               cmd.ExecuteNonQuery();
-
-               cmd.Dispose();
-            }
-            catch (Exception ex)
-            {
-               Status.NewStat(StatT.Bad, ex.Message);
-               return false;
-            }
-            return true;
-         }
-         else
-         {
-            return false;
-         }
-
-      } // End SQLcmdSingle
-
-      /// <summary>
-      /// Send multiple command to the database.
-      /// <param name="querys">Array with the strings containing the SQL chain and data.</param>
-      /// <param name="numQuerys">Number of elements in the strings array.</param></summary>
-      private bool SQLcmdMult(string[] querys, int numQuerys)
-      {
-         int i;
-         //http://www.karlrixon.co.uk/writing/update-multiple-rows-with-different-values-and-a-single-sql-query/
-         //open connection
-
-         if (this.Connect() == true)
-         {
-            try
-            {
-               //create command and assign the query and connection from the constructor
-               MySqlCommand cmd = new MySqlCommand("", conn);
-
-               if (querys.Length >= numQuerys)
-                  for (i = 0; i < numQuerys; i++)
-                  {
-                     if (querys[i] != null)
-                     {
-                        //Execute command
-                        cmd.CommandText = querys[i];
-                        cmd.ExecuteNonQuery();
-                     }
-                  }
-
-               //Dispose the CMD
-               cmd.Dispose();
-            }
-            catch (Exception ex)
-            {
-               Status.NewStat(StatT.Bad, ex.Message);
-               return false;
-            }
-            return true;
-         }
-         else
-         {
-            return false;
-         }
-      }
-
-      /// <summary>
-      /// Connect to the database. </summary>
-      private bool Connect()
-      {
-         try
-         {
-            if (conn.State != System.Data.ConnectionState.Open)
-            {
-               this.Disconnect();
-               System.Threading.Thread.Sleep(3000);
-               conn.Open();
-
-               //Check how well it went.
-               if (conn.State != System.Data.ConnectionState.Open)
-               {
-                  Status.NewStat(StatT.Warning, "Connection Failed...");
-                  this.Disconnect();
-                  return false;
-               }
-               else
-               {
-                  return true;
-               }
-            }
-            else
-            {
-               //It its Open
-               return true;
-            }
-
-         }
-         catch (MySqlException ex)
-         {
-            Status.NewStat(StatT.Bad, ex.Message);
-            return false;
-         }
-      } //END Connect function
-
-      /// <summary>
-      /// Disconnect from the database. </summary>
-      public bool Disconnect()
-      {
-         try
-         {
-            if (conn.State != System.Data.ConnectionState.Closed) conn.Close();
-            return true;
-         }
-         catch (MySqlException ex)
-         {
-            Status.NewStat(StatT.Bad, ex.Message);
-         }
-         return false;
-      } //END DisConnect function
+      #endregion
+      #region Public Methods
 
       /// <summary>
       /// Read data from the database. 
@@ -600,9 +474,142 @@ namespace DriverCommApp.Database.DBMySQL
          return false;
       } //END Write function
 
+      /// <summary>
+      /// Disconnect from the database. </summary>
+      public bool Disconnect()
+      {
+         try
+         {
+            if (conn.State != System.Data.ConnectionState.Closed) conn.Close();
+            return true;
+         }
+         catch (MySqlException ex)
+         {
+            Status.NewStat(StatT.Bad, ex.Message);
+         }
+         return false;
+      } //END DisConnect function
 
+      #endregion
+      #region Private Methods
+      /// <summary>
+      /// Send a single command to the database.
+      /// <param name="query">String with the SQL chain and data.</param> </summary>
+      private bool SQLcmdSingle(string query)
+      {
+         //http://www.codeproject.com/Articles/43438/Connect-C-to-MySQL
+         //open connection
+         if (this.Connect() == true)
+         {
+            try
+            {
+               //create command and assign the query and connection from the constructor
+               MySqlCommand cmd = new MySqlCommand(query, conn);
 
-      #region IDisposable Support
+               //Execute command
+               cmd.ExecuteNonQuery();
+
+               cmd.Dispose();
+            }
+            catch (Exception ex)
+            {
+               Status.NewStat(StatT.Bad, ex.Message);
+               return false;
+            }
+            return true;
+         }
+         else
+         {
+            return false;
+         }
+
+      } // End SQLcmdSingle
+
+      /// <summary>
+      /// Send multiple command to the database.
+      /// <param name="querys">Array with the strings containing the SQL chain and data.</param>
+      /// <param name="numQuerys">Number of elements in the strings array.</param></summary>
+      private bool SQLcmdMult(string[] querys, int numQuerys)
+      {
+         int i;
+         //http://www.karlrixon.co.uk/writing/update-multiple-rows-with-different-values-and-a-single-sql-query/
+         //open connection
+
+         if (this.Connect() == true)
+         {
+            try
+            {
+               //create command and assign the query and connection from the constructor
+               MySqlCommand cmd = new MySqlCommand("", conn);
+
+               if (querys.Length >= numQuerys)
+                  for (i = 0; i < numQuerys; i++)
+                  {
+                     if (querys[i] != null)
+                     {
+                        //Execute command
+                        cmd.CommandText = querys[i];
+                        cmd.ExecuteNonQuery();
+                     }
+                  }
+
+               //Dispose the CMD
+               cmd.Dispose();
+            }
+            catch (Exception ex)
+            {
+               Status.NewStat(StatT.Bad, ex.Message);
+               return false;
+            }
+            return true;
+         }
+         else
+         {
+            return false;
+         }
+      }
+
+      /// <summary>
+      /// Connect to the database. </summary>
+      private bool Connect()
+      {
+         try
+         {
+            if (conn.State != System.Data.ConnectionState.Open)
+            {
+               this.Disconnect();
+               System.Threading.Thread.Sleep(3000);
+               conn.Open();
+
+               //Check how well it went.
+               if (conn.State != System.Data.ConnectionState.Open)
+               {
+                  Status.NewStat(StatT.Warning, "Connection Failed...");
+                  this.Disconnect();
+                  return false;
+               }
+               else
+               {
+                  return true;
+               }
+            }
+            else
+            {
+               //It its Open
+               return true;
+            }
+
+         }
+         catch (MySqlException ex)
+         {
+            Status.NewStat(StatT.Bad, ex.Message);
+            return false;
+         }
+      } //END Connect function
+
+      
+      #endregion
+      #region IDisposable/Desctructor Support
       private bool disposedValue = false; // To detect redundant calls
 
       protected virtual void Dispose(bool disposing)

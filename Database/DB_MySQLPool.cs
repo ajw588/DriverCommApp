@@ -17,6 +17,7 @@ namespace DriverCommApp.Database.DBMySQL
    /// making it thread safe.</summary>
    class DB_MySQLPool : IDisposable
    {
+      #region Global Objects for this Class
       /// <summary>
       /// Database Server Configuration.</summary>
       DBConfClass.ServerConf DBConfig;
@@ -32,7 +33,8 @@ namespace DriverCommApp.Database.DBMySQL
       /// <summary>
       /// Initialization flag.</summary>
       public bool isInitialized;
-
+      #endregion
+      #region Class Constructor and Initialization
       /// <summary>
       /// Class Constructor.
       /// <param name="Server">Server configuration struct.</param> 
@@ -165,46 +167,8 @@ namespace DriverCommApp.Database.DBMySQL
 
          return 0;
       } // END Init DB function
-
-      /// <summary>
-      /// Send a single command to the database.
-      /// <param name="query">String with the SQL chain and data.</param> </summary>
-      private bool SQLcmdSingle(string query)
-      {
-         //Default Param
-         MySqlParameter[] Param = new MySqlParameter[1];
-         Param[0] = new MySqlParameter();
-
-         try
-         {
-            //Execute command
-            if (MySqlHelper.ExecuteNonQuery(myConnectionString, query, Param) < 0)
-               return false;
-         }
-         catch (Exception ex)
-         {
-            Status.NewStat(StatT.Bad, ex.Message);
-            return false;
-         }
-         return true;
-      } // End SQLcmdSingle
-
-      /// <summary>
-      /// Disconnect from the database. </summary>
-      public bool Disconnect()
-      {
-         try
-         {
-            //TODO: Force close all the connections.
-            return true;
-         }
-         catch (MySqlException ex)
-         {
-            Status.NewStat(StatT.Bad, ex.Message);
-         }
-         return false;
-      } //END DisConnect function
-
+      #endregion
+      #region Public Methods
       /// <summary>
       /// Read data from the database. 
       /// <param name="Data">Struct ref to object to save data.</param>
@@ -517,9 +481,49 @@ namespace DriverCommApp.Database.DBMySQL
          return false;
       } //END Write function
 
+      /// <summary>
+      /// Disconnect from the database. </summary>
+      public bool Disconnect()
+      {
+         try
+         {
+            //TODO: Force close all the connections.
+            System.Threading.Thread.Sleep(3000);
+            return true;
+         }
+         catch (MySqlException ex)
+         {
+            Status.NewStat(StatT.Bad, ex.Message);
+         }
+         return false;
+      } //END DisConnect function
+      #endregion
+      #region Private Methods
+      /// <summary>
+      /// Send a single command to the database.
+      /// <param name="query">String with the SQL chain and data.</param> </summary>
+      private bool SQLcmdSingle(string query)
+      {
+        
+         try
+         {
+            //Default Param
+            MySqlParameter[] Param = new MySqlParameter[1];
+            Param[0] = new MySqlParameter();
 
-
-      #region IDisposable Support
+            //Execute command
+            if (MySqlHelper.ExecuteNonQuery(myConnectionString, query, Param) < 0)
+               return false;
+         }
+         catch (Exception ex)
+         {
+            Status.NewStat(StatT.Bad, ex.Message);
+            return false;
+         }
+         return true;
+      } // End SQLcmdSingle
+      #endregion
+      #region IDisposable/Desctructor Support
       private bool disposedValue = false; // To detect redundant calls
 
       protected virtual void Dispose(bool disposing)
